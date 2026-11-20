@@ -189,11 +189,12 @@ export default function SignupPage() {
 
       // Redirect based on account role
       setTimeout(() => {
-        router.push(
-          role === "vendor"
-            ? "/vendor/dashboard"
-            : "/customer/dashboard"
-        );
+        // router.push(
+        //   role === "vendor"
+        //     ? "/vendor/dashboard"
+        //     : "/customer/dashboard"
+        // )
+        router.push("/dashboard");
 
         router.refresh();
       }, 1200);
@@ -226,7 +227,8 @@ export default function SignupPage() {
       const { error: googleError } =
         await authClient.signIn.social({
           provider: "google",
-          callbackURL: "/customer/dashboard",
+          // callbackURL: "/customer/dashboard",
+          callbackURL: "dashboard",
         });
 
       if (googleError) {
@@ -276,6 +278,14 @@ export default function SignupPage() {
             <span className="text-2xl font-bold">
               Wed<span className="text-[#f45b4f]">Plan</span>
             </span>
+          </Link>
+
+          <Link
+            href="/"
+            className="relative z-10 mt-6 inline-flex w-fit items-center gap-2 text-sm text-[#d2c2bc] transition hover:text-white"
+          >
+            <ArrowRight className="rotate-180" size={16} />
+            Back to Home
           </Link>
 
           {/* Information */}

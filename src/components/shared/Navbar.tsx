@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
 import { authClient } from "@/lib/auth-client";
 
 import {
@@ -39,11 +38,16 @@ export default function Navbar() {
     (user as typeof user & { role?: string })?.role || "customer";
 
   // Dashboard based on role
-  const dashboardLink =
-    role === "vendor"
-      ? "/vendor/dashboard"
-      : "/customer/dashboard";
+  // const dashboardLink = "/dashboard";
 
+  let dashboardLink = "/dashboard/customer";
+  if (role === "vendor") {
+      dashboardLink = "/dashboard/vendor";
+  }
+
+  if (role === "admin") {
+    dashboardLink = "/dashboard/admin";
+  }
   // Logout
   const handleLogout = async () => {
     try {
@@ -205,7 +209,8 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/profile/settings"
+                      // href="/profile/settings"
+                      href={`/dashboard/${role}/profile`}
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[#51413b] transition hover:bg-[#fff3ef] hover:text-[#f45b4f]"
                     >

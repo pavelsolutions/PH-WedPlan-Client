@@ -18,6 +18,6 @@ return NextResponse.next();
 }
 
 export const config = {
-  // matcher: ["/profile/:path*"],
-  matcher: ['/add-book', '/dashboard', '/dashboard/:path',  '/books/:path']
+  matcher: ["/profile/:path*"],
+  // matcher: ['/add-book', '/dashboard', '/dashboard/:path',  '/books/:path']
 };
