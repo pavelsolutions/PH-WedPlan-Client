@@ -1,32 +1,41 @@
-
 import { NextResponse } from "next/server";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-
     const image = formData.get("image");
 
-    // Check image
+    // Validate image exists
     if (!(image instanceof File)) {
       return NextResponse.json(
-        { message: "Image is required" },
+        {
+          success: false,
+          message: "Image is required.",
+        },
         { status: 400 }
       );
     }
 
-    // Check image type
+    // Validate image type
     if (!image.type.startsWith("image/")) {
       return NextResponse.json(
-        { message: "Only image files are allowed" },
+        {
+          success: false,
+          message: "Only image files are allowed.",
+        },
         { status: 400 }
       );
     }
 
-    // Check image size (5MB)
-    if (image.size > 5 * 1024 * 1024) {
+    // Validate size
+    if (image.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { message: "Image must be smaller than 5MB" },
+        {
+          success: false,
+          message: "Image must be smaller than 5MB.",
+        },
         { status: 400 }
       );
     }
@@ -34,15 +43,13 @@ export async function POST(request: Request) {
     const apiKey = process.env.IMGBB_API_KEY;
 
     if (!apiKey) {
-      throw new Error("ImgBB API key is missing");
+      throw new Error("ImgBB API key is missing.");
     }
 
-    // Prepare ImgBB request
     const uploadData = new FormData();
-
     uploadData.append("image", image);
 
-    // Upload image to ImgBB
+    // Upload to ImgBB
     const response = await fetch(
       `https://api.imgbb.com/1/upload?key=${apiKey}`,
       {
@@ -55,21 +62,26 @@ export async function POST(request: Request) {
 
     if (!response.ok || !result.success) {
       return NextResponse.json(
-        { message: "Image upload failed" },
+        {
+          success: false,
+          message: result.error?.message || "Image upload failed.",
+        },
         { status: 400 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      imageUrl: result.data.url,
+      imageUrl: result.data.display_url,
     });
-
   } catch (error) {
     console.error("Image Upload Error:", error);
 
     return NextResponse.json(
-      { message: "Something went wrong during image upload" },
+      {
+        success: false,
+        message: "Something went wrong during image upload.",
+      },
       { status: 500 }
     );
   }
