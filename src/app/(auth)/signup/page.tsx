@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
 import { authClient } from "@/lib/auth-client";
 
 import {
@@ -26,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -44,9 +44,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Message states
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+
 
   // Password visibility
   const [showPassword, setShowPassword] = useState(false);
@@ -67,25 +65,26 @@ export default function SignupPage() {
 
     if (!file) return;
 
-    setError("");
-    setImagePreview("");
-
-    // Check image type
     if (!file.type.startsWith("image/")) {
-      setError("Please select a valid image.");
+      toast.error("Invalid image", {
+        description: "Please select a valid image.",
+      });
       e.target.value = "";
       return;
     }
 
-    // Check image size
     if (file.size > 5 * 1024 * 1024) {
-      setError("Image size must be less than 5MB.");
+      toast.error("Image too large", {
+        description: "Image size must be less than 5MB.",
+      });
       e.target.value = "";
       return;
     }
 
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+
+    toast.success("Image selected successfully!");
   };
 
   // Remove Selected Image
@@ -124,32 +123,43 @@ export default function SignupPage() {
   ) => {
     e.preventDefault();
 
-    setError("");
-    setSuccess("");
-
-    // Check empty fields
     if (!name.trim() || !email.trim() || !password) {
-      setError("Please fill in all required fields.");
+      toast.error("Missing information", {
+        description: "Please fill in all required fields.",
+      });
       return;
     }
 
-    // Check password
     if (!passwordValid) {
-      setError("Please follow all password requirements.");
+      toast.error("Invalid password", {
+        description: "Please follow all password requirements.",
+      });
       return;
     }
+
+    let toastId: string | number | undefined;
 
     try {
       setLoading(true);
+
+      toastId = toast.loading("Creating your account...");
 
       let uploadedImageUrl = "";
 
       // Upload image if selected
       if (imageFile) {
+        toast.loading("Uploading profile image...", {
+          id: toastId,
+        });
+
         uploadedImageUrl = await uploadImage(imageFile);
       }
 
       // Better Auth Signup
+      toast.loading("Registering your account...", {
+        id: toastId,
+      });
+
       const { data, error: authError } =
         await authClient.signUp.email({
           name: name.trim(),
@@ -159,8 +169,6 @@ export default function SignupPage() {
           role,
         });
 
-        console.log(data);
-
       if (authError) {
         throw new Error(
           authError.message || "Registration failed."
@@ -168,19 +176,27 @@ export default function SignupPage() {
       }
 
       if (!data) {
-        throw new Error("Registration failed. Please try again.");
+        throw new Error(
+          "Registration failed. Please try again."
+        );
       }
 
-      setSuccess("Account created successfully!");
+      toast.success("Registration successful!", {
+        id: toastId,
+        description: `Welcome to WedPlan! Your ${role} account has been created.`,
+        duration: 2500,
+      });
 
       // Redirect based on account role
-      router.push(
-        role === "vendor"
-          ? "/vendor/dashboard"
-          : "/customer/dashboard"
-      );
+      setTimeout(() => {
+        router.push(
+          role === "vendor"
+            ? "/vendor/dashboard"
+            : "/customer/dashboard"
+        );
 
-      router.refresh();
+        router.refresh();
+      }, 1200);
 
     } catch (err) {
       const message =
@@ -188,24 +204,40 @@ export default function SignupPage() {
           ? err.message
           : "Something went wrong.";
 
-      setError(message);
+      toast.error("Registration failed!", {
+        id: toastId,
+        description: message,
+        duration: 4000,
+      });
 
     } finally {
       setLoading(false);
     }
   };
-
   // Google Signup
   const handleGoogleSignup = async () => {
-    setError("");
-    setSuccess("");
+    let toastId: string | number | undefined;
 
     try {
       setGoogleLoading(true);
 
-      await authClient.signIn.social({
-        provider: "google",
-        callbackURL: "/customer/dashboard",
+      toastId = toast.loading("Connecting to Google...");
+
+      const { error: googleError } =
+        await authClient.signIn.social({
+          provider: "google",
+          callbackURL: "/customer/dashboard",
+        });
+
+      if (googleError) {
+        throw new Error(
+          googleError.message || "Google authentication failed."
+        );
+      }
+
+      toast.success("Google authentication successful!", {
+        id: toastId,
+        description: "Redirecting you to your account...",
       });
 
     } catch (err) {
@@ -214,7 +246,11 @@ export default function SignupPage() {
           ? err.message
           : "Google authentication failed.";
 
-      setError(message);
+      toast.error("Google sign-in failed!", {
+        id: toastId,
+        description: message,
+      });
+
       setGoogleLoading(false);
     }
   };
@@ -339,23 +375,6 @@ export default function SignupPage() {
           </div>
 
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-              <X size={18} className="mt-0.5 shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="mb-5 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-              <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
-              <p>{success}</p>
-            </div>
-          )}
-
-
           {/* Signup Form */}
           <form onSubmit={handleSignup} className="space-y-5">
 
@@ -445,32 +464,55 @@ export default function SignupPage() {
               </div>
 
               {/* Password Rules */}
-              <div className="rounded-xl bg-[#fffaf7] p-4">
+              {/* Password Requirements - Show only when invalid */}
+              {password.length > 0 && !passwordValid && (
+                <div className="rounded-xl border border-red-100 bg-red-50 p-4">
 
-                <p className="mb-3 text-xs font-semibold text-[#806f68]">
-                  Password must contain:
-                </p>
+                  <p className="mb-2 text-sm font-semibold text-red-700">
+                    Password must contain:
+                  </p>
 
-                <div className="space-y-2">
+                  <div className="space-y-2 text-xs text-red-600">
 
-                  <div className={`flex items-center gap-2 text-xs ${hasMinLength ? "text-green-600" : "text-[#88766e]"}`}>
-                    <CheckCircle2 size={14} />
-                    At least 6 characters
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2
+                        size={15}
+                        className={
+                          password.length >= 6
+                            ? "text-green-600"
+                            : "text-red-500"
+                        }
+                      />
+                      At least 6 characters
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2
+                        size={15}
+                        className={
+                          /[A-Z]/.test(password)
+                            ? "text-green-600"
+                            : "text-red-500"
+                        }
+                      />
+                      One uppercase letter
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2
+                        size={15}
+                        className={
+                          /[a-z]/.test(password)
+                            ? "text-green-600"
+                            : "text-red-500"
+                        }
+                      />
+                      One lowercase letter
+                    </div>
+
                   </div>
-
-                  <div className={`flex items-center gap-2 text-xs ${hasUppercase ? "text-green-600" : "text-[#88766e]"}`}>
-                    <CheckCircle2 size={14} />
-                    One uppercase letter
-                  </div>
-
-                  <div className={`flex items-center gap-2 text-xs ${hasLowercase ? "text-green-600" : "text-[#88766e]"}`}>
-                    <CheckCircle2 size={14} />
-                    One lowercase letter
-                  </div>
-
                 </div>
-
-              </div>
+              )}
 
             </div>
 
@@ -565,11 +607,10 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setRole("vendor")}
-                  className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
-                    role === "vendor"
-                      ? "border-[#f45b4f] bg-[#fff5f1]"
-                      : "border-[#eadfd9] hover:border-[#f45b4f]"
-                  }`}
+                  className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${role === "vendor"
+                    ? "border-[#f45b4f] bg-[#fff5f1]"
+                    : "border-[#eadfd9] hover:border-[#f45b4f]"
+                    }`}
                 >
 
                   <Store size={21} className="mt-1 shrink-0 text-[#f45b4f]" />
@@ -591,11 +632,10 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setRole("customer")}
-                  className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
-                    role === "customer"
-                      ? "border-[#f45b4f] bg-[#fff5f1]"
-                      : "border-[#eadfd9] hover:border-[#f45b4f]"
-                  }`}
+                  className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${role === "customer"
+                    ? "border-[#f45b4f] bg-[#fff5f1]"
+                    : "border-[#eadfd9] hover:border-[#f45b4f]"
+                    }`}
                 >
 
                   <Users size={21} className="mt-1 shrink-0 text-[#f45b4f]" />
@@ -697,24 +737,18 @@ export default function SignupPage() {
 
 
           {/* Security Note */}
-          <div className="mt-7 rounded-xl border border-[#f1e5df] bg-[#fffaf7] p-4">
-
+          {/* <div className="mt-7 rounded-xl border border-[#f1e5df] bg-[#fffaf7] p-4">
             <div className="flex items-start gap-3">
               <Lock size={17} className="mt-0.5 shrink-0 text-[#f45b4f]" />
-
               <p className="text-xs leading-6 text-[#88766e]">
                 Your account information will be kept secure.
                 Admin accounts cannot be created through public
                 registration.
               </p>
             </div>
-
-          </div>
-
+          </div> */}
         </div>
-
       </div>
-
     </main>
   );
 }
