@@ -37,7 +37,6 @@ export default function ManageServicesPage() {
     const [deleteModal, setDeleteModal] = useState(false);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
 
-    console.log(services, "SESS");
 
     const fetchServices = async () => {
         try {

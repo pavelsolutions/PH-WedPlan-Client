@@ -92,3 +92,49 @@ export const cancelMyBooking = async (
 
   return data;
 };
+
+
+
+export const getVendorBookings = async (vendorId: string) => {
+  const res = await fetch(
+    `${BASE_URL}/vendor/bookings/${vendorId}`,
+    {
+      credentials: "include",
+      cache: "no-store",
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to fetch bookings");
+  }
+
+  return data.data || [];
+};
+
+export const updateVendorBookingStatus = async (
+  vendorId: string,
+  bookingId: string,
+  status: "Confirmed" | "Rejected"
+) => {
+  const res = await fetch(
+    `${BASE_URL}/vendor/bookings/${vendorId}/${bookingId}/status`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to update booking");
+  }
+
+  return data;
+};

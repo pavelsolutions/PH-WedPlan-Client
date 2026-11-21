@@ -169,6 +169,7 @@ export default function SignupPage() {
           role,
         });
 
+
       if (authError) {
         throw new Error(
           authError.message || "Registration failed."

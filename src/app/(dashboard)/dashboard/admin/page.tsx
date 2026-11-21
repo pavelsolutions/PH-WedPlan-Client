@@ -1,5 +1,9 @@
 
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+
 import {
   Users,
   Store,
@@ -7,12 +11,28 @@ import {
   CreditCard,
   ArrowUpRight,
   ShieldCheck,
-  UserRound,
   CheckCircle2,
   Clock,
   Ban,
   ClipboardList,
+  Loader2,
+  RefreshCw,
+  UserRound,
 } from "lucide-react";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+
+type DashboardStats = {
+  totalUsers: number;
+  totalVendors: number;
+  totalCustomers: number;
+  publishedServices: number;
+  totalTransactions: number;
+  activeUsers: number;
+  blockedUsers: number;
+  pendingServices: number;
+};
 
 const managementCards = [
   {
@@ -53,55 +73,101 @@ const managementCards = [
   },
 ];
 
-const stats = [
-  {
-    title: "Total Users",
-    value: "1,248",
-    icon: Users,
-    color: "bg-blue-50 text-blue-600",
-  },
-  {
-    title: "Total Vendors",
-    value: "186",
-    icon: Store,
-    color: "bg-purple-50 text-purple-600",
-  },
-  {
-    title: "Published Services",
-    value: "324",
-    icon: BriefcaseBusiness,
-    color: "bg-orange-50 text-orange-600",
-  },
-  {
-    title: "Transactions",
-    value: "524",
-    icon: CreditCard,
-    color: "bg-green-50 text-green-600",
-  },
-];
-
-const overview = [
-  {
-    title: "Active Users",
-    value: "1,186",
-    icon: CheckCircle2,
-    color: "text-green-600",
-  },
-  {
-    title: "Blocked Users",
-    value: "62",
-    icon: Ban,
-    color: "text-red-500",
-  },
-  {
-    title: "Pending Services",
-    value: "18",
-    icon: Clock,
-    color: "text-orange-500",
-  },
-];
-
 export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchDashboardStats = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${BASE_URL}/admin/dashboard/stats`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to load dashboard statistics"
+        );
+      }
+
+      setStats(result.data);
+    } catch (err) {
+      console.error("Dashboard Stats Error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
+  const statCards = [
+    {
+      title: "Total Users",
+      value: stats?.totalUsers ?? 0,
+      icon: Users,
+      color: "bg-blue-50 text-blue-600",
+    },
+    {
+      title: "Total Vendors",
+      value: stats?.totalVendors ?? 0,
+      icon: Store,
+      color: "bg-purple-50 text-purple-600",
+    },
+    {
+      title: "Published Services",
+      value: stats?.publishedServices ?? 0,
+      icon: BriefcaseBusiness,
+      color: "bg-orange-50 text-orange-600",
+    },
+    {
+      title: "Transactions",
+      value: stats?.totalTransactions ?? 0,
+      icon: CreditCard,
+      color: "bg-green-50 text-green-600",
+    },
+  ];
+
+  const overview = [
+    {
+      title: "Active Users",
+      value: stats?.activeUsers ?? 0,
+      icon: CheckCircle2,
+      color: "text-green-600",
+    },
+    {
+      title: "Blocked Users",
+      value: stats?.blockedUsers ?? 0,
+      icon: Ban,
+      color: "text-red-500",
+    },
+    {
+      title: "Pending Services",
+      value: stats?.pendingServices ?? 0,
+      icon: Clock,
+      color: "text-orange-500",
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-[#fffaf7] p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -123,20 +189,49 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <div className="flex w-fit items-center gap-2 rounded-xl border border-[#f1e8e3] bg-white px-4 py-3 shadow-sm">
-            <div className="flex size-9 items-center justify-center rounded-full bg-[#fff1ee] text-[#f45b4f]">
-              <ShieldCheck size={19} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[#302521]">
-                Administrator
-              </p>
-              <p className="text-xs text-gray-500">
-                Platform Management
-              </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={fetchDashboardStats}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-xl border border-[#f1e8e3] bg-white px-4 py-3 text-sm font-medium text-[#302521] shadow-sm transition hover:bg-[#fff1ee] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw
+                size={16}
+                className={loading ? "animate-spin" : ""}
+              />
+              Refresh
+            </button>
+
+            <div className="flex w-fit items-center gap-2 rounded-xl border border-[#f1e8e3] bg-white px-4 py-3 shadow-sm">
+              <div className="flex size-9 items-center justify-center rounded-full bg-[#fff1ee] text-[#f45b4f]">
+                <ShieldCheck size={19} />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-[#302521]">
+                  Administrator
+                </p>
+                <p className="text-xs text-gray-500">
+                  Platform Management
+                </p>
+              </div>
             </div>
           </div>
         </section>
+
+        {/* Error Message */}
+        {error && (
+          <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-red-600">{error}</p>
+
+            <button
+              onClick={fetchDashboardStats}
+              className="w-fit rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
         {/* Statistics */}
         <section>
@@ -144,13 +239,14 @@ export default function AdminDashboardPage() {
             <h2 className="text-lg font-bold text-[#302521]">
               Platform Overview
             </h2>
+
             <p className="mt-1 text-sm text-gray-500">
               A quick overview of your platform.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((stat) => {
+            {statCards.map((stat) => {
               const Icon = stat.icon;
 
               return (
@@ -162,6 +258,7 @@ export default function AdminDashboardPage() {
                     <div className={`rounded-xl p-3 ${stat.color}`}>
                       <Icon size={22} />
                     </div>
+
                     <ArrowUpRight
                       size={19}
                       className="text-gray-300"
@@ -173,7 +270,11 @@ export default function AdminDashboardPage() {
                   </p>
 
                   <h3 className="mt-1 text-2xl font-bold text-[#302521]">
-                    {stat.value}
+                    {loading ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-[#f45b4f]" />
+                    ) : (
+                      stat.value.toLocaleString()
+                    )}
                   </h3>
                 </div>
               );
@@ -187,6 +288,7 @@ export default function AdminDashboardPage() {
             <h2 className="text-lg font-bold text-[#302521]">
               Management Center
             </h2>
+
             <p className="mt-1 text-sm text-gray-500">
               Manage every important aspect of your platform from here.
             </p>
@@ -238,6 +340,7 @@ export default function AdminDashboardPage() {
                     <span className="text-sm font-semibold text-[#f45b4f]">
                       Manage Now
                     </span>
+
                     <ArrowUpRight
                       size={17}
                       className="text-[#f45b4f] transition group-hover:translate-x-1 group-hover:-translate-y-1"
@@ -255,6 +358,7 @@ export default function AdminDashboardPage() {
             <h2 className="text-lg font-bold text-[#302521]">
               Management Overview
             </h2>
+
             <p className="mt-1 text-sm text-gray-500">
               Important information requiring admin attention.
             </p>
@@ -277,14 +381,26 @@ export default function AdminDashboardPage() {
                     <p className="text-sm text-gray-500">
                       {item.title}
                     </p>
+
                     <h3 className="mt-1 text-xl font-bold text-[#302521]">
-                      {item.value}
+                      {loading ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-[#f45b4f]" />
+                      ) : (
+                        item.value.toLocaleString()
+                      )}
                     </h3>
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {!loading && stats && (
+            <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
+              <UserRound size={14} />
+              Total customers: {stats.totalCustomers.toLocaleString()}
+            </div>
+          )}
         </section>
 
         {/* Admin Responsibilities */}
@@ -307,7 +423,10 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-              <ClipboardList size={32} className="text-[#ff8a78]" />
+              <ClipboardList
+                size={32}
+                className="text-[#ff8a78]"
+              />
             </div>
           </div>
         </section>

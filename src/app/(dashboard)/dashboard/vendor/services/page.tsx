@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +16,12 @@ import {
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { deleteService, getVendorServices } from "@/lib/actions/api/services";
+
+import {
+    deleteService,
+    getVendorServices
+} from "@/lib/actions/api/services";
+
 import { IService } from "@/types";
 import { toast } from "sonner";
 
@@ -29,9 +35,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { updateService } from "@/lib/actions/services";
 
 type ServiceStatus = "Approved" | "Pending" | "Rejected";
-
 
 const statusStyles: Record<ServiceStatus, string> = {
     Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -44,21 +50,34 @@ export default function VendorServicesPage() {
         authClient.useSession();
 
     const vendorId = session?.user?.id;
+
     const [services, setServices] = useState<IService[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    // Search and filters
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [categoryFilter, setCategoryFilter] = useState("All categories");
 
     // Delete states
-    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
-
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
 
+    // Edit states
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingService, setEditingService] = useState<IService | null>(null);
+    const [editLoading, setEditLoading] = useState(false);
+
+    const [editForm, setEditForm] = useState({
+        serviceName: "",
+        category: "",
+        price: "",
+        location: "",
+        description: "",
+        image: "",
+    });
 
     // Fetch vendor services
     useEffect(() => {
@@ -133,6 +152,145 @@ export default function VendorServicesPage() {
         return new Intl.NumberFormat("en-BD").format(price);
     };
 
+    // Open Edit Modal
+    const handleEditClick = (service: IService) => {
+        setEditingService(service);
+
+        setEditForm({
+            serviceName: service.serviceName || "",
+            category: service.category || "",
+            price: String(service.price ?? ""),
+            location: service.location || "",
+            description: service.description || "",
+            image: service.image || "",
+        });
+
+        setEditDialogOpen(true);
+    };
+
+    // Handle edit form changes
+    const handleEditChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => {
+        const { name, value } = e.target;
+
+        setEditForm((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    // Update Service
+    const handleUpdateService = async () => {
+        if (!editingService) return;
+
+        if (
+            !editForm.serviceName.trim() ||
+            !editForm.category.trim() ||
+            !editForm.price ||
+            !editForm.location.trim()
+        ) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        const price = Number(editForm.price);
+
+        if (!Number.isFinite(price) || price <= 0) {
+            toast.error("Please enter a valid price");
+            return;
+        }
+
+        try {
+            setEditLoading(true);
+
+            const updatedData = {
+                serviceName: editForm.serviceName.trim(),
+                category: editForm.category.trim(),
+                price,
+                location: editForm.location.trim(),
+                description: editForm.description.trim(),
+                image: editForm.image.trim(),
+            };
+
+            const response = await updateService(
+                editingService._id,
+                updatedData
+            );
+
+            setServices((prev) =>
+                prev.map((service) =>
+                    service._id === editingService._id
+                        ? {
+                            ...service,
+                            ...updatedData,
+                            ...(response?.service || {}),
+                        }
+                        : service
+                )
+            );
+
+            toast.success("Service updated successfully!");
+
+            setEditDialogOpen(false);
+            setEditingService(null);
+
+        } catch (err) {
+            console.error("Update service error:", err);
+
+            toast.error(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to update service"
+            );
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    // Open delete confirmation
+    const handleDeleteClick = (serviceId: string) => {
+        setSelectedServiceId(serviceId);
+        setDeleteDialogOpen(true);
+    };
+
+    // Delete service
+    const handleDeleteService = async () => {
+        if (!selectedServiceId) return;
+
+        try {
+            setDeleteLoading(true);
+            setError("");
+
+            await deleteService(selectedServiceId);
+
+            setServices((prev) =>
+                prev.filter(
+                    (service) => service._id !== selectedServiceId
+                )
+            );
+
+            toast.success("Service deleted successfully!", {
+                description: "Your wedding service has been removed.",
+            });
+
+            setDeleteDialogOpen(false);
+            setSelectedServiceId(null);
+
+        } catch (err) {
+            console.error("Delete service error:", err);
+
+            toast.error("Failed to delete service", {
+                description:
+                    err instanceof Error
+                        ? err.message
+                        : "Something went wrong.",
+            });
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
     // Loading state
     if (sessionLoading || loading) {
         return (
@@ -177,50 +335,6 @@ export default function VendorServicesPage() {
         );
     }
 
-    // Open delete confirmation modal
-    const handleDeleteClick = (serviceId: string) => {
-        setSelectedServiceId(serviceId);
-        setDeleteDialogOpen(true);
-    };
-
-    // Confirm and delete service
-    const handleDeleteService = async () => {
-        if (!selectedServiceId) return;
-
-        try {
-            setDeleteLoading(true);
-            setDeletingId(selectedServiceId);
-            setError("");
-
-            await deleteService(selectedServiceId);
-
-            // Update UI without reloading
-            setServices((prev) =>
-                prev.filter((service) => service._id !== selectedServiceId)
-            );
-
-            toast.success("Service deleted successfully!", {
-                description: "Your wedding service has been removed.",
-            });
-
-            setDeleteDialogOpen(false);
-            setSelectedServiceId(null);
-
-        } catch (err) {
-            console.error("Delete service error:", err);
-
-            toast.error("Failed to delete service", {
-                description:
-                    err instanceof Error
-                        ? err.message
-                        : "Something went wrong. Please try again.",
-            });
-
-        } finally {
-            setDeleteLoading(false);
-            setDeletingId(null);
-        }
-    };
     return (
         <div className="min-h-screen bg-[#fcfaf9]">
             <div className="mx-auto max-w-[1500px] space-y-6 p-5 sm:p-7 lg:p-8">
@@ -241,7 +355,7 @@ export default function VendorServicesPage() {
                 <div className="flex justify-end">
                     <Link
                         href="/dashboard/vendor/services/add"
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#922638] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#761d2e]"
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#dc2027] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#761d2e]"
                     >
                         <Plus size={17} />
                         Add New Service
@@ -319,10 +433,11 @@ export default function VendorServicesPage() {
                                     <button
                                         key={status}
                                         onClick={() => setStatusFilter(status)}
-                                        className={`rounded-lg px-3 py-2 text-xs font-medium transition ${statusFilter === status
-                                            ? "bg-white text-[#922638] shadow-sm"
-                                            : "text-[#987f83] hover:text-[#421b24]"
-                                            }`}
+                                        className={`rounded-lg px-3 py-2 text-xs font-medium transition ${
+                                            statusFilter === status
+                                                ? "bg-white text-[#922638] shadow-sm"
+                                                : "text-[#987f83] hover:text-[#421b24]"
+                                        }`}
                                     >
                                         {status}
                                     </button>
@@ -365,7 +480,6 @@ export default function VendorServicesPage() {
                                 key={service._id}
                                 className="flex flex-col gap-5 rounded-2xl border border-[#e9ded8] bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row sm:items-center sm:p-5"
                             >
-
                                 {/* Service Image */}
                                 <div className="h-28 w-full shrink-0 overflow-hidden rounded-xl border border-[#eee4df] bg-[#faf5f2] sm:w-28">
                                     {service.image ? (
@@ -389,8 +503,12 @@ export default function VendorServicesPage() {
                                         </h3>
 
                                         <span
-                                            className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusStyles[service.status]
-                                                }`}
+                                            className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                                                statusStyles[
+                                                    service.status as ServiceStatus
+                                                ] ||
+                                                "border-gray-200 bg-gray-50 text-gray-600"
+                                            }`}
                                         >
                                             {service.status}
                                         </span>
@@ -416,40 +534,25 @@ export default function VendorServicesPage() {
                                 {/* Action Buttons */}
                                 <div className="flex shrink-0 flex-wrap items-center gap-3">
 
-                                    {/* Availability Toggle */}
-                                    <div className="flex items-center gap-2 rounded-xl border border-[#eadfd9] px-3 py-2">
-                                        <span className="text-xs font-medium text-[#8b7478]">
-                                            Active
-                                        </span>
-
-                                        <input
-                                            type="checkbox"
-                                            defaultChecked
-                                            aria-label={`Toggle availability for ${service.serviceName}`}
-                                            className="peer sr-only"
-                                            id={`active-${service._id}`}
-                                        />
-
-                                        <label
-                                            htmlFor={`active-${service._id}`}
-                                            className="relative h-6 w-11 cursor-pointer rounded-full bg-gray-300 transition peer-checked:bg-[#922638] after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-all peer-checked:after:translate-x-5"
-                                        />
-                                    </div>
-
                                     {/* Edit Button */}
-                                    <Link
-                                        href={`/dashboard/vendor/services/${service._id}/edit`}
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            handleEditClick(service)
+                                        }
                                         className="inline-flex items-center gap-2 rounded-xl border border-[#e8dcd6] px-4 py-2.5 text-xs font-semibold text-[#421b24] transition hover:bg-[#faf4f1]"
                                     >
                                         <Pencil size={14} />
                                         Edit
-                                    </Link>
+                                    </button>
 
                                     {/* Delete Button */}
                                     <button
                                         type="button"
                                         disabled={deleteLoading}
-                                        onClick={() => handleDeleteClick(service._id)}
+                                        onClick={() =>
+                                            handleDeleteClick(service._id)
+                                        }
                                         className="inline-flex items-center gap-2 rounded-xl bg-[#dc2027] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#bd171e] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Trash2 size={14} />
@@ -459,7 +562,6 @@ export default function VendorServicesPage() {
                             </div>
                         ))
                     ) : (
-                        /* Empty State */
                         <div className="rounded-2xl border border-[#e9ded8] bg-white px-6 py-16 text-center shadow-sm">
                             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f8f0ed] text-[#922638]">
                                 <BriefcaseBusiness size={28} />
@@ -479,8 +581,8 @@ export default function VendorServicesPage() {
 
                             {services.length === 0 && (
                                 <Link
-                                    href="/dashboard/vendor/services/new"
-                                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#922638] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e]"
+                                    href="/dashboard/vendor/services/add"
+                                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#dc2027] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e]"
                                 >
                                     <Plus size={16} />
                                     Add New Service
@@ -498,7 +600,176 @@ export default function VendorServicesPage() {
                 </div>
             </div>
 
-            {/* Delete Confirmation Modal */}
+            {/* EDIT MODAL */}
+            <AlertDialog
+                open={editDialogOpen}
+                onOpenChange={(open) => {
+                    if (!editLoading) {
+                        setEditDialogOpen(open);
+
+                        if (!open) {
+                            setEditingService(null);
+                        }
+                    }
+                }}
+            >
+                <AlertDialogContent className="!w-[95vw] !max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border-[#eadfd9]">
+                    <AlertDialogHeader>
+                        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#f8f0ed]">
+                            <Pencil className="text-[#922638]" size={22} />
+                        </div>
+
+                        <AlertDialogTitle className="font-serif text-2xl text-[#421b24]">
+                            Edit Wedding Service
+                        </AlertDialogTitle>
+
+                        <AlertDialogDescription className="text-sm leading-6 text-[#8b7478]">
+                            Update your service details and save your changes.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-4 py-3">
+
+                        {/* Service Name */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[#421b24]">
+                                Service Name *
+                            </label>
+
+                            <input
+                                name="serviceName"
+                                value={editForm.serviceName}
+                                onChange={handleEditChange}
+                                placeholder="Enter service name"
+                                className="w-full rounded-xl border border-[#eadfd9] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#922638] focus:ring-2 focus:ring-[#922638]/10"
+                            />
+                        </div>
+
+                        {/* Category and Price */}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-[#421b24]">
+                                    Category *
+                                </label>
+
+                                <input
+                                    name="category"
+                                    value={editForm.category}
+                                    onChange={handleEditChange}
+                                    placeholder="Photography"
+                                    className="w-full rounded-xl border border-[#eadfd9] px-4 py-3 text-sm outline-none focus:border-[#922638]"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-[#421b24]">
+                                    Price (BDT) *
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="1"
+                                    name="price"
+                                    value={editForm.price}
+                                    onChange={handleEditChange}
+                                    placeholder="Enter price"
+                                    className="w-full rounded-xl border border-[#eadfd9] px-4 py-3 text-sm outline-none focus:border-[#922638]"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Location */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[#421b24]">
+                                Location *
+                            </label>
+
+                            <input
+                                name="location"
+                                value={editForm.location}
+                                onChange={handleEditChange}
+                                placeholder="Enter service location"
+                                className="w-full rounded-xl border border-[#eadfd9] px-4 py-3 text-sm outline-none focus:border-[#922638]"
+                            />
+                        </div>
+
+                        {/* Image URL */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[#421b24]">
+                                Image URL
+                            </label>
+
+                            <input
+                                name="image"
+                                value={editForm.image}
+                                onChange={handleEditChange}
+                                placeholder="Enter image URL"
+                                className="w-full rounded-xl border border-[#eadfd9] px-4 py-3 text-sm outline-none focus:border-[#922638]"
+                            />
+                        </div>
+
+                        {/* Image Preview */}
+                        {editForm.image && (
+                            <div className="overflow-hidden rounded-xl border border-[#eadfd9]">
+                                <img
+                                    src={editForm.image}
+                                    alt="Service preview"
+                                    className="h-40 w-full object-cover"
+                                />
+                            </div>
+                        )}
+
+                        {/* Description */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[#421b24]">
+                                Description
+                            </label>
+
+                            <textarea
+                                name="description"
+                                value={editForm.description}
+                                onChange={handleEditChange}
+                                rows={4}
+                                placeholder="Describe your wedding service..."
+                                className="w-full resize-none rounded-xl border border-[#eadfd9] px-4 py-3 text-sm outline-none focus:border-[#922638]"
+                            />
+                        </div>
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel
+                            disabled={editLoading}
+                            className="rounded-xl border-[#eadfd9]"
+                        >
+                            Cancel
+                        </AlertDialogCancel>
+
+                        <button
+                            type="button"
+                            disabled={editLoading}
+                            onClick={handleUpdateService}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#922638] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {editLoading ? (
+                                <>
+                                    <RefreshCw
+                                        size={15}
+                                        className="animate-spin"
+                                    />
+                                    Updating...
+                                </>
+                            ) : (
+                                <>
+                                    <Pencil size={15} />
+                                    Save Changes
+                                </>
+                            )}
+                        </button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* DELETE CONFIRMATION MODAL */}
             <AlertDialog
                 open={deleteDialogOpen}
                 onOpenChange={(open) => {
@@ -520,6 +791,7 @@ export default function VendorServicesPage() {
                         <AlertDialogTitle className="font-serif text-xl text-[#421b24]">
                             Delete Wedding Service?
                         </AlertDialogTitle>
+
                         <AlertDialogDescription className="text-sm leading-6 text-[#8b7478]">
                             Are you sure you want to delete this service?
                             This action cannot be undone, and the service

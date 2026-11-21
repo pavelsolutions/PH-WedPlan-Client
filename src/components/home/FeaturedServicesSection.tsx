@@ -40,7 +40,6 @@ import { IService } from "@/types";
 
 export default async function FeaturedServicesSection() {
   const featuredServices = await getAllServices();
-  console.log(featuredServices, "Featured");
   return (
     <section className="bg-white px-5 py-20 lg:px-8 lg:py-24">
       <div className="mx-auto max-w-7xl">

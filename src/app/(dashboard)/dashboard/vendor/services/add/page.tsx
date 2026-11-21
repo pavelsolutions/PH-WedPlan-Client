@@ -1,524 +1,855 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
 import {
-    ArrowLeft,
-    ImagePlus,
-    MapPin,
-    X,
-    Heart,
-    Clock3,
+  ArrowLeft,
+  ImagePlus,
+  MapPin,
+  X,
+  Heart,
+  Clock3,
+  Loader2,
+  Crown,
+  LockKeyhole,
 } from "lucide-react";
+
 import { toast } from "sonner";
 import { uploadImage } from "@/lib/uploadImage";
 import { CreateServicePayload, ServiceCategory } from "@/types";
 import { createService } from "@/lib/actions/services";
-import { auth } from "@/lib/auth";
 import { authClient } from "@/lib/auth-client";
 
-const categories = [
-    "Photography & Videography",
-    "Wedding Venues",
-    "Decoration & Florist",
-    "Catering Services",
-    "Makeup & Styling",
-    "Wedding Fashion",
+const categories: ServiceCategory[] = [
+  "Photography & Videography",
+  "Wedding Venues",
+  "Decoration & Florist",
+  "Catering Services",
+  "Makeup & Styling",
+  "Wedding Fashion",
 ];
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const FREE_SERVICE_LIMIT = 3;
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function AddServicePage() {
-    const router = useRouter();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const { data: session, isPending } = authClient.useSession();
-    const user = session?.user?.id;
-    // console.log(user, "user data");
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Form states
-    const [serviceName, setServiceName] = useState("");
-    // const [category, setCategory] = useState("");
-    const [category, setCategory] = useState<ServiceCategory | "">("");
-    const [price, setPrice] = useState("");
-    const [location, setLocation] = useState("");
-    const [description, setDescription] = useState("");
+  const { data: session, isPending } = authClient.useSession();
 
-    // Image states
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState("");
+  const user = session?.user;
 
-    // UI states
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+  // Form states
+  const [serviceName, setServiceName] = useState("");
+  const [category, setCategory] = useState<ServiceCategory | "">("");
+  const [price, setPrice] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
 
-    // ----------------------------------------
-    // Handle image selection
-    // ----------------------------------------
-    const handleImageChange = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const file = e.target.files?.[0];
+  // Image states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
 
-        if (!file) return;
+  // UI states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-        if (!file.type.startsWith("image/")) {
-            toast.error("Invalid image", {
-                description: "Please select a valid image.",
-            });
+  // Service count states
+  const [serviceCount, setServiceCount] = useState(0);
+  const [countLoading, setCountLoading] = useState(true);
 
-            e.target.value = "";
-            return;
+  // Subscription
+  const subscriptionPlan = String(
+    user?.subscriptionPlan || "free"
+  )
+    .trim()
+    .toLowerCase();
+
+  const isPremium = subscriptionPlan === "premium";
+
+  const isVendor =
+    String(user?.role || "").toLowerCase() === "vendor";
+
+  const hasReachedLimit =
+    !isPremium && serviceCount >= FREE_SERVICE_LIMIT;
+
+  const remainingServices = Math.max(
+    FREE_SERVICE_LIMIT - serviceCount,
+    0
+  );
+
+  // Authentication and role protection
+  useEffect(() => {
+    if (isPending) return;
+
+    if (!user) {
+      toast.error("Please login to continue.");
+      router.replace("/login");
+      return;
+    }
+
+    if (!isVendor) {
+      toast.error("Only vendors can publish services.");
+      router.replace("/");
+      return;
+    }
+
+    if (user.isBlocked) {
+      toast.error("Your account has been blocked.");
+      router.replace("/");
+    }
+  }, [isPending, user, isVendor, router]);
+
+  // Fetch vendor service count
+  const fetchServiceCount = async () => {
+    if (!user?.id || !isVendor) {
+      setCountLoading(false);
+      return;
+    }
+
+    try {
+      setCountLoading(true);
+
+      const response = await fetch(
+        `${BASE_URL}/vendor/services/count/${encodeURIComponent(
+          user.id
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
         }
+      );
 
-        if (file.size > MAX_FILE_SIZE) {
-            toast.error("Image too large", {
-                description: "Image size must be less than 5MB.",
-            });
+      const data = await response.json();
 
-            e.target.value = "";
-            return;
-        }
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch service count."
+        );
+      }
 
-        // Remove previous preview URL
-        if (imagePreview) {
-            URL.revokeObjectURL(imagePreview);
-        }
+      setServiceCount(Number(data.count) || 0);
 
-        setImageFile(file);
-        setImagePreview(URL.createObjectURL(file));
-        setError("");
+    } catch (err) {
+      console.error("Service count error:", err);
 
-        toast.success("Image selected successfully!");
+      toast.error("Could not check your service limit.");
+
+    } finally {
+      setCountLoading(false);
+    }
+  };
+
+  // Load service count
+  useEffect(() => {
+    if (isPending) return;
+
+    if (user && isVendor) {
+      fetchServiceCount();
+    }
+  }, [isPending, user?.id, isVendor]);
+
+  // Image selection
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (
+      !["image/jpeg", "image/png", "image/webp"].includes(
+        file.type
+      )
+    ) {
+      toast.error("Only JPG, PNG and WebP images are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image size must be less than 5MB.");
+      e.target.value = "";
+      return;
+    }
+
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError("");
+
+    toast.success("Image selected successfully!");
+  };
+
+  // Remove image
+  const removeImage = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(null);
+    setImagePreview("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Cleanup preview URL
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
     };
+  }, [imagePreview]);
 
-    // ----------------------------------------
-    // Remove selected image
-    // ----------------------------------------
-    const removeImage = () => {
-        if (imagePreview) {
-            URL.revokeObjectURL(imagePreview);
-        }
+  // Form validation
+  const validateForm = () => {
+    if (
+      !serviceName.trim() ||
+      serviceName.trim().length < 3
+    ) {
+      setError(
+        "Service name must contain at least 3 characters."
+      );
+      return false;
+    }
 
-        setImageFile(null);
-        setImagePreview("");
+    if (!category) {
+      setError("Please select a service category.");
+      return false;
+    }
 
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
-    };
+    if (
+      !price ||
+      !Number.isFinite(Number(price)) ||
+      Number(price) <= 0
+    ) {
+      setError("Please enter a valid service price.");
+      return false;
+    }
 
-    // ----------------------------------------
-    // Form validation
-    // ----------------------------------------
-    const validateForm = () => {
-        if (!serviceName.trim()) {
-            setError("Service name is required.");
-            return false;
-        }
+    if (!location.trim()) {
+      setError("Service location is required.");
+      return false;
+    }
 
-        if (!category) {
-            setError("Please select a service category.");
-            return false;
-        }
+    if (
+      !description.trim() ||
+      description.trim().length < 10
+    ) {
+      setError(
+        "Description must contain at least 10 characters."
+      );
+      return false;
+    }
 
-        if (!price || Number(price) <= 0) {
-            setError("Please enter a valid service price.");
-            return false;
-        }
+    if (!imageFile) {
+      setError("Please upload a service image.");
+      return false;
+    }
 
-        if (!location.trim()) {
-            setError("Service location is required.");
-            return false;
-        }
+    setError("");
+    return true;
+  };
 
-        if (!description.trim()) {
-            setError("Service description is required.");
-            return false;
-        }
+  // Submit service
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
+    e.preventDefault();
 
-        if (!imageFile) {
-            setError("Please upload a service image.");
-            return false;
-        }
+    if (isPending || loading) return;
 
-        setError("");
-        return true;
-    };
+    if (!user || !isVendor) {
+      toast.error(
+        "Only authenticated vendors can publish services."
+      );
+      return;
+    }
 
-    // ----------------------------------------
-    // Submit service
-    // ----------------------------------------
-    const handleSubmit = async (
-        e: React.FormEvent<HTMLFormElement>
-    ) => {
-        e.preventDefault();
+    if (user.isBlocked) {
+      toast.error("Your account has been blocked.");
+      return;
+    }
 
-        if (!validateForm()) {
-            toast.error("Please complete the form");
-            return;
-        }
+    // Free plan limit check
+    if (!isPremium && serviceCount >= FREE_SERVICE_LIMIT) {
+      toast.error("Free plan service limit reached.");
+      return;
+    }
 
-        try {
-            setLoading(true);
-            setError("");
+    if (!validateForm()) {
+      toast.error("Please complete all required fields.");
+      return;
+    }
 
-            // 1. Upload image
-            toast.loading("Uploading service image...", {
-                id: "service-upload",
-            });
+    try {
+      setLoading(true);
+      setError("");
 
-            const imageUrl = await uploadImage(imageFile!);
+      // Upload image
+      const uploadToast = toast.loading(
+        "Uploading service image..."
+      );
 
-            toast.success("Image uploaded successfully!", {
-                id: "service-upload",
-            });
+      let imageUrl: string;
 
-            // 2. Prepare service data
-            // Better Auth session
+      try {
+        imageUrl = await uploadImage(imageFile!);
+      } catch {
+        toast.error("Image upload failed.", {
+          id: uploadToast,
+        });
 
+        throw new Error(
+          "Unable to upload service image."
+        );
+      }
 
-            const serviceData: CreateServicePayload = {
-                serviceName: serviceName.trim(),
-                category: category as ServiceCategory,
-                description: description.trim(),
-                price: Number(price),
-                location: location.trim(),
-                image: imageUrl,
-                vendorId: user,
-            };
+      if (!imageUrl) {
+        throw new Error(
+          "Image URL was not generated."
+        );
+      }
 
-            //  3. Save to backend 
-            // const response = await fetch(
-            //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/services`,
-            //   {
-            //     method: "POST",
-            //     headers: {
-            //       "Content-Type": "application/json",
-            //     },
-            //     body: JSON.stringify(serviceData),
-            //   }
-            // );
+      toast.success("Image uploaded successfully!", {
+        id: uploadToast,
+      });
 
-            // API function call
-            const result = await createService(serviceData);
+      // Prepare service data
+      const serviceData: CreateServicePayload = {
+        serviceName: serviceName.trim(),
+        category: category as ServiceCategory,
+        description: description.trim(),
+        price: Number(price),
+        location: location.trim(),
+        image: imageUrl,
+        vendorId: user.id,
+      };
 
-            // 4. Success notification
-            toast.success("Service submitted successfully!", {
-                description: "Your service is now pending admin approval.",
-            });
+      // Create service
+      await createService(serviceData);
 
-            // 5. Reset form
-            setServiceName("");
-            setCategory("");
-            setPrice("");
-            setLocation("");
-            setDescription("");
-            removeImage();
+      toast.success("Service submitted successfully!", {
+        description:
+          "Your service is waiting for admin approval.",
+      });
 
-            // 6. Redirect
-            router.push("/dashboard/vendor/services");
+      // Update service count
+      setServiceCount((prev) => prev + 1);
 
-        } catch (err) {
-            console.error("Add service error:", err);
+      // Reset form
+      setServiceName("");
+      setCategory("");
+      setPrice("");
+      setLocation("");
+      setDescription("");
 
-            const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : "Something went wrong. Please try again.";
+      removeImage();
 
-            setError(errorMessage);
+      // Navigate
+      router.push("/dashboard/vendor/services");
 
-            toast.error("Failed to add service", {
-                description: errorMessage,
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+    } catch (err) {
+      console.error("Add service error:", err);
+
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.";
+
+      setError(errorMessage);
+
+      if (
+        errorMessage.toLowerCase().includes("limit") ||
+        errorMessage.toLowerCase().includes("maximum")
+      ) {
+        toast.error("Service limit reached!", {
+          description: errorMessage,
+        });
+
+        fetchServiceCount();
+
+      } else {
+        toast.error("Failed to add service", {
+          description: errorMessage,
+        });
+      }
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Loading screen
+  if (
+    isPending ||
+    !user ||
+    !isVendor ||
+    user.isBlocked ||
+    countLoading
+  ) {
     return (
-        <div className="min-h-full bg-[#FCFAF8] px-4 py-6 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-5xl">
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#9D263B]" />
+      </div>
+    );
+  }
 
-                {/* Page Header */}
-                <div className="mb-6 border-b border-[#F0E3DC] pb-5">
-                    <Link
-                        href="/dashboard/vendor/services"
-                        className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#FF5B52] transition hover:text-[#E44840]"
-                    >
-                        <ArrowLeft size={16} />
-                        Back to Services
-                    </Link>
+  return (
+    <div className="min-h-full bg-[#FCFAF8] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl">
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 className="font-serif text-3xl font-bold tracking-tight text-[#352621] sm:text-4xl">
-                                Add New Wedding Service
-                            </h1>
+        {/* Header */}
+        <div className="mb-6 border-b border-[#F0E3DC] pb-5">
 
-                            <p className="mt-2 text-sm leading-6 text-[#8C746B] sm:text-base">
-                                Publish a new wedding package. Submissions start as Pending
-                                until reviewed by an administrator.
-                            </p>
-                        </div>
+          <Link
+            href="/dashboard/vendor/services"
+            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#FF5B52] hover:text-[#E44840]"
+          >
+            <ArrowLeft size={16} />
+            Back to Services
+          </Link>
 
-                        {/* Status Badge */}
-                        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#F3D6CE] bg-[#FFF0EC] px-3 py-2 text-xs font-semibold text-[#C74D43]">
-                            <Clock3 size={14} />
-                            Pending Review
-                        </div>
-                    </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+            <div>
+              <h1 className="font-serif text-3xl font-bold text-[#352621] sm:text-4xl">
+                Add New Wedding Service
+              </h1>
+
+              <p className="mt-2 text-sm leading-6 text-[#8C746B]">
+                Publish a new wedding package. All submissions
+                require admin approval.
+              </p>
+            </div>
+
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#F3D6CE] bg-[#FFF0EC] px-3 py-2 text-xs font-semibold text-[#C74D43]">
+              <Clock3 size={14} />
+              Pending Review
+            </div>
+
+          </div>
+        </div>
+
+        {/* Subscription Information */}
+        <div className="mb-6 rounded-xl border border-[#F0E3DC] bg-white p-4">
+
+          <div className="flex items-center justify-between gap-3">
+
+            <div>
+              <p className="text-sm font-semibold text-[#352621]">
+                Your Subscription
+              </p>
+
+              <p className="mt-1 text-xs text-[#8C746B]">
+                {isPremium
+                  ? "You can publish unlimited services."
+                  : `You have used ${serviceCount} of 3 services.`}
+              </p>
+            </div>
+
+            <span
+              className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                isPremium
+                  ? "bg-purple-100 text-[#dc2027]"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {isPremium ? "PREMIUM" : "FREE"}
+            </span>
+
+          </div>
+
+          {!isPremium && (
+            <>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+
+                <div
+                  className="h-full rounded-full bg-[#9D263B] transition-all"
+                  style={{
+                    width: `${Math.min(
+                      (serviceCount / FREE_SERVICE_LIMIT) * 100,
+                      100
+                    )}%`,
+                  }}
+                />
+
+              </div>
+
+              <p className="mt-2 text-xs text-[#8C746B]">
+                {remainingServices > 0
+                  ? `${remainingServices} service slot(s) remaining.`
+                  : "You have reached your service limit."}
+              </p>
+            </>
+          )}
+
+        </div>
+
+        {/* Premium Upgrade Section */}
+        {hasReachedLimit && (
+
+          <div className="rounded-2xl border border-purple-200 bg-white p-6 text-center shadow-sm sm:p-10">
+
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100 text-purple-700">
+              <Crown size={32} />
+            </div>
+
+            <h2 className="font-serif text-2xl font-bold text-[#352621] sm:text-3xl">
+              Upgrade to Premium
+            </h2>
+
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[#8C746B]">
+              You have already submitted 3 services with your Free
+              subscription. Upgrade to Premium to publish unlimited
+              wedding services and grow your business.
+            </p>
+
+            <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-3 rounded-xl bg-purple-50 p-4 text-left">
+
+              <LockKeyhole
+                className="shrink-0 text-purple-700"
+                size={22}
+              />
+
+              <div>
+                <p className="text-sm font-semibold text-purple-900">
+                  Free plan limit reached
+                </p>
+
+                <p className="mt-1 text-xs text-purple-700">
+                  3 out of 3 services have been used.
+                </p>
+              </div>
+
+            </div>
+
+            <Link
+              href="/pricing"
+              className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-purple-700 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-purple-800"
+            >
+              <Crown size={17} />
+              Upgrade to Premium
+            </Link>
+
+            <p className="mt-4 text-xs text-[#A18C90]">
+              Already upgraded? Refresh the page to update your plan.
+            </p>
+
+          </div>
+        )}
+
+        {/* Service Form */}
+        {!hasReachedLimit && (
+
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-2xl border border-[#F0E3DC] bg-white p-5 shadow-sm sm:p-7 lg:p-8"
+          >
+
+            <div className="mb-7">
+              <h2 className="font-serif text-2xl font-bold text-[#352621]">
+                Service Details
+              </h2>
+
+              <p className="mt-2 text-sm text-[#8C746B]">
+                Provide accurate pricing, location and service information.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
+
+              {/* Service Name */}
+              <div>
+                <label
+                  htmlFor="serviceName"
+                  className="mb-2 block text-sm font-medium text-[#352621]"
+                >
+                  Service Name *
+                </label>
+
+                <input
+                  id="serviceName"
+                  type="text"
+                  value={serviceName}
+                  onChange={(e) =>
+                    setServiceName(e.target.value)
+                  }
+                  placeholder="e.g. Wedding Photography Package"
+                  required
+                  maxLength={100}
+                  className="w-full rounded-xl border border-[#F0E3DC] px-3.5 py-3 text-sm outline-none focus:border-[#FF5B52] focus:ring-4 focus:ring-[#FF5B52]/10"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label
+                  htmlFor="category"
+                  className="mb-2 block text-sm font-medium text-[#352621]"
+                >
+                  Service Category *
+                </label>
+
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(
+                      e.target.value as ServiceCategory | ""
+                    )
+                  }
+                  required
+                  className="w-full rounded-xl border border-[#F0E3DC] bg-white px-3.5 py-3 text-sm outline-none focus:border-[#FF5B52]"
+                >
+                  <option value="">Select a category</option>
+
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price */}
+              <div>
+                <label
+                  htmlFor="price"
+                  className="mb-2 block text-sm font-medium text-[#352621]"
+                >
+                  Starting Price (BDT) *
+                </label>
+
+                <div className="flex overflow-hidden rounded-xl border border-[#F0E3DC]">
+
+                  <span className="flex items-center border-r border-[#F0E3DC] bg-[#FCFAF8] px-4 text-sm font-medium">
+                    ৳
+                  </span>
+
+                  <input
+                    id="price"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={price}
+                    onChange={(e) =>
+                      setPrice(e.target.value)
+                    }
+                    placeholder="25000"
+                    required
+                    className="w-full px-3.5 py-3 text-sm outline-none"
+                  />
+
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label
+                  htmlFor="location"
+                  className="mb-2 block text-sm font-medium text-[#352621]"
+                >
+                  Location / Coverage Area *
+                </label>
+
+                <div className="flex items-center overflow-hidden rounded-xl border border-[#F0E3DC]">
+
+                  <MapPin
+                    size={17}
+                    className="ml-3.5 shrink-0 text-[#B49A91]"
+                  />
+
+                  <input
+                    id="location"
+                    type="text"
+                    value={location}
+                    onChange={(e) =>
+                      setLocation(e.target.value)
+                    }
+                    placeholder="e.g. Dhaka, Bangladesh"
+                    required
+                    className="w-full px-3 py-3 text-sm outline-none"
+                  />
+
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="md:col-span-2">
+
+                <label
+                  htmlFor="description"
+                  className="mb-2 block text-sm font-medium text-[#352621]"
+                >
+                  Service Description *
+                </label>
+
+                <textarea
+                  id="description"
+                  rows={5}
+                  maxLength={2000}
+                  value={description}
+                  onChange={(e) =>
+                    setDescription(e.target.value)
+                  }
+                  placeholder="Describe your service, packages, deliverables and customization options..."
+                  required
+                  className="w-full resize-y rounded-xl border border-[#F0E3DC] px-3.5 py-3 text-sm leading-6 outline-none focus:border-[#FF5B52] focus:ring-4 focus:ring-[#FF5B52]/10"
+                />
+
+                <div className="mt-1.5 flex justify-end">
+                  <span className="text-xs text-[#A18C90]">
+                    {description.length}/2000
+                  </span>
                 </div>
 
-                {/* Main Form */}
-                <form
-                    onSubmit={handleSubmit}
-                    className="rounded-2xl border border-[#F0E3DC] bg-white p-5 shadow-[0_2px_5px_rgba(75,40,30,0.04)] sm:p-7 lg:p-8"
-                >
-                    {/* Form Heading */}
-                    <div className="mb-7">
-                        <h2 className="font-serif text-2xl font-bold text-[#352621]">
-                            Service Details
-                        </h2>
+              </div>
 
-                        <p className="mt-2 text-sm text-[#8C746B]">
-                            Provide clear pricing, location coverage, and a high-quality
-                            photograph of your service.
-                        </p>
+              {/* Service Image */}
+              <div className="md:col-span-2">
+
+                <label className="mb-2 block text-sm font-medium text-[#352621]">
+                  Service Image *
+                </label>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+
+                {imagePreview ? (
+
+                  <div className="relative overflow-hidden rounded-xl border border-[#F0E3DC]">
+
+                    <img
+                      src={imagePreview}
+                      alt="Selected service"
+                      className="h-64 w-full object-cover sm:h-80"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      aria-label="Remove image"
+                      className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-red-600 shadow-md"
+                    >
+                      <X size={18} />
+                    </button>
+
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+
+                      <p className="truncate text-sm font-medium text-white">
+                        {imageFile?.name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-white/80">
+                        Service image preview
+                      </p>
+
                     </div>
 
-                    <div className="grid grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
+                  </div>
 
-                        {/* Service Name */}
-                        <div>
-                            <label
-                                htmlFor="serviceName"
-                                className="mb-2 block text-sm font-medium text-[#352621]"
-                            >
-                                Service Name <span className="text-[#FF5B52]">*</span>
-                            </label>
+                ) : (
 
-                            <input
-                                id="serviceName"
-                                type="text"
-                                value={serviceName}
-                                onChange={(e) => setServiceName(e.target.value)}
-                                placeholder="e.g. Full-Day Editorial Wedding Photography"
-                                required
-                                className="w-full rounded-xl border border-[#F0E3DC] bg-white px-3.5 py-3 text-sm text-[#352621] outline-none transition placeholder:text-[#A18C90] focus:border-[#FF5B52] focus:ring-4 focus:ring-[#FF5B52]/10"
-                            />
-                        </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      fileInputRef.current?.click()
+                    }
+                    className="flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#F0E3DC] bg-[#FCFAF8] p-8 text-center transition hover:border-[#FF5B52] hover:bg-[#FFF0EC] sm:p-10"
+                  >
 
-                        {/* Category */}
-                        <div>
-                            <label
-                                htmlFor="category"
-                                className="mb-2 block text-sm font-medium text-[#352621]"
-                            >
-                                Service Category <span className="text-[#FF5B52]">*</span>
-                            </label>
-
-                            <select
-                                id="category"
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                required
-                                className="w-full rounded-xl border border-[#F0E3DC] bg-white px-3.5 py-3 text-sm text-[#352621] outline-none transition focus:border-[#FF5B52] focus:ring-4 focus:ring-[#FF5B52]/10"
-                            >
-                                <option value="">Select a category</option>
-
-                                {categories.map((item) => (
-                                    <option key={item} value={item}>
-                                        {item}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Price */}
-                        <div>
-                            <label
-                                htmlFor="price"
-                                className="mb-2 block text-sm font-medium text-[#352621]"
-                            >
-                                Starting Price (BDT){" "}
-                                <span className="text-[#FF5B52]">*</span>
-                            </label>
-
-                            <div className="flex overflow-hidden rounded-xl border border-[#F0E3DC] bg-white transition focus-within:border-[#FF5B52] focus-within:ring-4 focus-within:ring-[#FF5B52]/10">
-                                <span className="flex items-center border-r border-[#F0E3DC] bg-[#FCFAF8] px-4 text-sm font-medium text-[#8C746B]">
-                                    ৳
-                                </span>
-
-                                <input
-                                    id="price"
-                                    type="number"
-                                    min="1"
-                                    value={price}
-                                    onChange={(e) => setPrice(e.target.value)}
-                                    placeholder="25000"
-                                    required
-                                    className="w-full bg-white px-3.5 py-3 text-sm text-[#352621] outline-none placeholder:text-[#A18C90]"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Location */}
-                        <div>
-                            <label
-                                htmlFor="location"
-                                className="mb-2 block text-sm font-medium text-[#352621]"
-                            >
-                                Location / Coverage Area{" "}
-                                <span className="text-[#FF5B52]">*</span>
-                            </label>
-
-                            <div className="flex items-center overflow-hidden rounded-xl border border-[#F0E3DC] bg-white transition focus-within:border-[#FF5B52] focus-within:ring-4 focus-within:ring-[#FF5B52]/10">
-                                <MapPin
-                                    size={17}
-                                    className="ml-3.5 shrink-0 text-[#B49A91]"
-                                />
-
-                                <input
-                                    id="location"
-                                    type="text"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    placeholder="e.g. Dhaka, Bangladesh"
-                                    required
-                                    className="w-full bg-white px-3 py-3 text-sm text-[#352621] outline-none placeholder:text-[#A18C90]"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Description */}
-                        <div className="md:col-span-2">
-                            <label
-                                htmlFor="description"
-                                className="mb-2 block text-sm font-medium text-[#352621]"
-                            >
-                                Service Description{" "}
-                                <span className="text-[#FF5B52]">*</span>
-                            </label>
-
-                            <textarea
-                                id="description"
-                                rows={5}
-                                maxLength={2000}
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Describe deliverables, hours of coverage, customization options, and what makes your service special..."
-                                required
-                                className="w-full resize-y rounded-xl border border-[#F0E3DC] bg-white px-3.5 py-3 text-sm leading-6 text-[#352621] outline-none transition placeholder:text-[#A18C90] focus:border-[#FF5B52] focus:ring-4 focus:ring-[#FF5B52]/10"
-                            />
-
-                            <div className="mt-1.5 flex justify-end">
-                                <span className="text-xs text-[#A18C90]">
-                                    {description.length}/2000
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Single Image Upload */}
-                        <div className="md:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-[#352621]">
-                                Service Image <span className="text-[#FF5B52]">*</span>
-                            </label>
-
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                onChange={handleImageChange}
-                                className="hidden"
-                            />
-
-                            {imagePreview ? (
-                                <div className="relative overflow-hidden rounded-xl border border-[#F0E3DC] bg-white">
-                                    <img
-                                        src={imagePreview}
-                                        alt="Selected service"
-                                        className="h-64 w-full object-cover sm:h-80"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={removeImage}
-                                        aria-label="Remove selected image"
-                                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#9D263B] shadow-md transition hover:bg-[#FFF0EC]"
-                                    >
-                                        <X size={18} />
-                                    </button>
-
-                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                                        <p className="truncate text-sm font-medium text-white">
-                                            {imageFile?.name}
-                                        </p>
-                                        <p className="mt-1 text-xs text-white/80">
-                                            Service image preview
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#F0E3DC] bg-[#FCFAF8] p-8 text-center transition hover:border-[#FF5B52] hover:bg-[#FFF0EC] sm:p-10"
-                                >
-                                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF0EC] text-[#FF5B52]">
-                                        <ImagePlus size={24} />
-                                    </div>
-
-                                    <span className="text-sm font-semibold text-[#352621]">
-                                        Click to upload service image
-                                    </span>
-
-                                    <span className="mt-2 text-xs text-[#8C746B]">
-                                        PNG, JPG, or WebP · Maximum 5MB
-                                    </span>
-                                </button>
-                            )}
-                        </div>
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF0EC] text-[#FF5B52]">
+                      <ImagePlus size={24} />
                     </div>
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="mt-5 rounded-xl border border-[#F5C6C2] bg-[#FFF0EC] px-4 py-3 text-sm text-[#B83C35]">
-                            {error}
-                        </div>
-                    )}
+                    <span className="text-sm font-semibold text-[#352621]">
+                      Click to upload service image
+                    </span>
 
+                    <span className="mt-2 text-xs text-[#8C746B]">
+                      PNG, JPG or WebP · Maximum 5MB
+                    </span>
 
-                    {/* Action Buttons */}
-                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#9D263B] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#862033] focus:outline-none focus:ring-4 focus:ring-[#9D263B]/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {loading ? (
-                                <>
-                                    <Clock3 size={16} className="animate-spin" />
-                                    Publishing...
-                                </>
-                            ) : (
-                                <>
-                                    <Heart size={16} />
-                                    Publish Service for Review
-                                </>
-                            )}
-                        </button>
+                  </button>
 
-                        <Link
-                            href="/dashboard/vendor/services"
-                            className="inline-flex items-center justify-center rounded-xl border border-[#F0E3DC] bg-white px-6 py-3.5 text-sm font-medium text-[#8C746B] transition hover:border-[#FF5B52] hover:bg-[#FFF0EC] hover:text-[#FF5B52]"
-                        >
-                            Cancel
-                        </Link>
-                    </div>
-                </form>
+                )}
+
+              </div>
+
             </div>
-        </div>
-    );
+
+            {/* Error */}
+            {error && (
+              <div className="mt-5 rounded-xl border border-[#F5C6C2] bg-[#FFF0EC] px-4 py-3 text-sm text-[#B83C35]">
+                {error}
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+
+              <button
+                type="submit"
+                disabled={
+                  loading ||
+                  isPending ||
+                  hasReachedLimit
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#9D263B] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#862033] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+
+                {loading ? (
+                  <>
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                    />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Heart size={16} />
+                    Publish Service for Review
+                  </>
+                )}
+
+              </button>
+
+              <Link
+                href="/dashboard/vendor/services"
+                className="inline-flex items-center justify-center rounded-xl border border-[#F0E3DC] bg-white px-6 py-3.5 text-sm font-medium text-[#8C746B] transition hover:border-[#FF5B52] hover:bg-[#FFF0EC]"
+              >
+                Cancel
+              </Link>
+
+            </div>
+
+          </form>
+
+        )}
+
+      </div>
+    </div>
+  );
 }
