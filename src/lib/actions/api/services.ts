@@ -1,15 +1,11 @@
-
-// const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
-
 import { IService } from "@/types";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
 
 // export const getServices = async () => {
 //     const res = await fetch(`${BASE_URL}/services`)
 //     return res.json();
 // }
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
 
 export const getServices = async (
@@ -27,6 +23,28 @@ export const getServices = async (
   }
 
   const data = await res.json();
+
+  return data;
+};
+
+
+export const deleteService = async (serviceId: string) => {
+  const response = await fetch(
+    `${BASE_URL}/services/${serviceId}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to delete service");
+  }
 
   return data;
 };

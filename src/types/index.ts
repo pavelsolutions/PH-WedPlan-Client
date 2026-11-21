@@ -47,6 +47,21 @@ export interface CreateServicePayload {
 // Update Service Payload
 export type UpdateServicePayload = Partial<CreateServicePayload>;
 
+export interface IProfile {
+  id: string;
+  name: string;
+  email: string;
+  image?: string;
+  role: string;
+  isBlocked: boolean;
+  businessName?: string;
+  phone?: string;
+  city?: string;
+  bio?: string;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: string | Date;
+}
+
 // Generic API Response
 export interface ApiResponse<T> {
   success: boolean;
