@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { deleteService, getServices } from "@/lib/actions/api/services";
+import { deleteService, getVendorServices } from "@/lib/actions/api/services";
 import { IService } from "@/types";
 import { toast } from "sonner";
 
@@ -75,7 +75,7 @@ export default function VendorServicesPage() {
                 setLoading(true);
                 setError("");
 
-                const data = await getServices(vendorId);
+                const data = await getVendorServices(vendorId);
 
                 setServices(data);
             } catch (err) {

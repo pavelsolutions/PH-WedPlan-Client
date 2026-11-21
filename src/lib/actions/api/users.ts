@@ -51,3 +51,39 @@ export const updateProfile = async (
 
   return result.data;
 };
+
+
+
+// Get All Registered Users
+export const getAdminUsers = async () => {
+  const res = await fetch(`${BASE_URL}/admin/users`);
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch users");
+  }
+
+  return res.json();
+};
+
+// Block / Unblock User
+export const updateAdminUser = async (
+  id: string,
+  isBlocked: boolean
+) => {
+  const res = await fetch(
+    `${BASE_URL}/admin/users/${id}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ isBlocked }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to update user");
+  }
+
+  return res.json();
+};

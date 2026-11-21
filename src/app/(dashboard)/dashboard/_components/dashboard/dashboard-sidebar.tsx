@@ -37,13 +37,13 @@ const navigation = {
     { title: "Add Service", href: "/dashboard/vendor/services/add", icon: PlusCircle },
     { title: "Booking Requests", href: "/dashboard/vendor/bookings", icon: CalendarDays },
     { title: "Subscription", href: "/dashboard/vendor/subscription", icon: CreditCard },
-    { title: "Profile Settings", href: "/dashboard/vendor/profile", icon: Settings },
+    { title: "Profile Settings", href: "/dashboard/profile", icon: Settings },
   ],
 
   customer: [
     { title: "Overview", href: "/dashboard/customer", icon: LayoutDashboard },
     { title: "My Bookings", href: "/dashboard/customer/bookings", icon: CalendarDays },
-    { title: "Profile Settings", href: "/dashboard/customer/profile", icon: Settings },
+    { title: "Profile Settings", href: "/dashboard/profile", icon: Settings },
   ],
 
   admin: [

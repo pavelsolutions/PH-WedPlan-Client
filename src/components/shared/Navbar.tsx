@@ -68,7 +68,7 @@ export default function Navbar() {
       setMenuOpen(false);
 
       setTimeout(() => {
-        router.push("/signin");
+        router.push("/");
         router.refresh();
       }, 1000);
 
@@ -210,7 +210,7 @@ export default function Navbar() {
 
                     <Link
                       // href="/profile/settings"
-                      href={`/dashboard/${role}/profile`}
+                      href={`/dashboard/profile`}
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[#51413b] transition hover:bg-[#fff3ef] hover:text-[#f45b4f]"
                     >

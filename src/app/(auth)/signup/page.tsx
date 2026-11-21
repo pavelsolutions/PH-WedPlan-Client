@@ -188,16 +188,28 @@ export default function SignupPage() {
       });
 
       // Redirect based on account role
-      setTimeout(() => {
-        // router.push(
-        //   role === "vendor"
-        //     ? "/vendor/dashboard"
-        //     : "/customer/dashboard"
-        // )
-        router.push("/dashboard");
 
-        router.refresh();
-      }, 1200);
+      const dashboard =
+        role === "vendor"
+          ? "/dashboard/vendor"
+          : role === "customer"
+            ? "/dashboard/customer"
+            : "/dashboard/admin";
+
+            
+            setTimeout(() => {
+                router.push(dashboard);
+                router.refresh();
+            }, 1200);
+
+      // setTimeout(() => {
+      //   router.push(
+      //     role === "vendor"
+      //       ? "/vendor/dashboard"
+      //       : "/customer/dashboard"
+      //   )
+      //   router.refresh();
+      // }, 1200);
 
     } catch (err) {
       const message =
@@ -227,8 +239,8 @@ export default function SignupPage() {
       const { error: googleError } =
         await authClient.signIn.social({
           provider: "google",
-          // callbackURL: "/customer/dashboard",
-          callbackURL: "dashboard",
+          callbackURL: `/dashboard/${role}`,
+          // callbackURL: "dashboard",
         });
 
       if (googleError) {

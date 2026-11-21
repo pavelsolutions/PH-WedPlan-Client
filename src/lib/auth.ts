@@ -65,10 +65,13 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
+          const role =
+            user.role === "vendor" ? "vendor" : "customer";
+
           return {
             data: {
               ...user,
-              role: "customer",
+              role,
               isBlocked: false,
               subscriptionPlan: "free",
             },

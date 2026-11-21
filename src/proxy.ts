@@ -11,13 +11,12 @@ export async function proxy(request: NextRequest) {
   const user = session?.user
 
   if(!user){
-    return NextResponse.redirect(new URL("/sign-in", request.url)) 
+    return NextResponse.redirect(new URL("/signin", request.url)) 
   }
 
 return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/profile/:path*"],
-  // matcher: ['/add-book', '/dashboard', '/dashboard/:path',  '/books/:path']
-};
+  matcher: ["/dashboard/:path*", "/services/:id"],
+}

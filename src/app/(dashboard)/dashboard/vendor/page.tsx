@@ -1,551 +1,498 @@
 
 import Link from "next/link";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  ChartNoAxesCombined,
-  Settings,
-  Search,
-  Bell,
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  MoreHorizontal,
   Store,
-  ChevronDown,
-  Menu,
+  BriefcaseBusiness,
+  CalendarDays,
   Wallet,
-  Clock3,
+  ArrowUpRight,
+  ArrowRight,
+  Clock,
   CheckCircle2,
-  Truck,
-  Star,
+  XCircle,
+  Plus,
+  Crown,
+  UserRound,
+  Eye,
+  Pencil,
+  Sparkles,
 } from "lucide-react";
 
 const stats = [
   {
-    title: "Total Revenue",
-    value: "৳ 1,84,500",
-    change: "+12.8%",
-    positive: true,
+    title: "Total Services",
+    value: "12",
+    description: "Your listed services",
+    icon: BriefcaseBusiness,
+    color: "bg-blue-50 text-blue-600",
+  },
+  {
+    title: "Total Bookings",
+    value: "48",
+    description: "All booking requests",
+    icon: CalendarDays,
+    color: "bg-purple-50 text-purple-600",
+  },
+  {
+    title: "Pending Requests",
+    value: "08",
+    description: "Awaiting your response",
+    icon: Clock,
+    color: "bg-orange-50 text-orange-600",
+  },
+  {
+    title: "Total Earnings",
+    value: "$4,850",
+    description: "Your total earnings",
     icon: Wallet,
-    color: "bg-violet-100 text-violet-600",
-  },
-  {
-    title: "Total Orders",
-    value: "1,248",
-    change: "+8.2%",
-    positive: true,
-    icon: ShoppingCart,
-    color: "bg-blue-100 text-blue-600",
-  },
-  {
-    title: "Total Products",
-    value: "156",
-    change: "+4 new",
-    positive: true,
-    icon: Package,
-    color: "bg-orange-100 text-orange-600",
-  },
-  {
-    title: "Pending Orders",
-    value: "24",
-    change: "-3.5%",
-    positive: false,
-    icon: Clock3,
-    color: "bg-rose-100 text-rose-600",
+    color: "bg-green-50 text-green-600",
   },
 ];
 
-const orders = [
+const managementCards = [
   {
-    id: "#ORD-2048",
-    customer: "Rahim Ahmed",
-    product: "Premium Wireless Headphone",
-    date: "Nov 20, 2026",
-    amount: "৳ 3,450",
-    status: "Processing",
+    title: "Vendor Profile",
+    description:
+      "Create and manage your business profile to showcase your wedding services.",
+    href: "/dashboard/vendor/profile",
+    icon: Store,
+    color: "bg-blue-50 text-blue-600",
+    action: "Manage Profile",
   },
   {
-    id: "#ORD-2047",
-    customer: "Nusrat Jahan",
-    product: "Smart Watch Series 8",
-    date: "Nov 20, 2026",
-    amount: "৳ 5,200",
-    status: "Delivered",
+    title: "Manage Services",
+    description:
+      "Add new wedding services, update existing listings or remove services.",
+    href: "/dashboard/vendor/services",
+    icon: BriefcaseBusiness,
+    color: "bg-purple-50 text-purple-600",
+    action: "Manage Services",
   },
   {
-    id: "#ORD-2046",
-    customer: "Tanvir Hasan",
-    product: "Leather Casual Backpack",
-    date: "Nov 19, 2026",
-    amount: "৳ 2,850",
-    status: "Shipped",
+    title: "Booking Requests",
+    description:
+      "View customer booking requests and accept or reject reservations.",
+    href: "/dashboard/vendor/bookings",
+    icon: CalendarDays,
+    color: "bg-orange-50 text-orange-600",
+    action: "View Bookings",
   },
   {
-    id: "#ORD-2045",
-    customer: "Sadia Islam",
-    product: "Wireless Earbuds Pro",
-    date: "Nov 19, 2026",
-    amount: "৳ 1,990",
+    title: "Subscription Plans",
+    description:
+      "View your current subscription and explore available plans.",
+    href: "/dashboard/vendor/subscription",
+    icon: Crown,
+    color: "bg-green-50 text-green-600",
+    action: "Manage Subscription",
+  },
+];
+
+const bookings = [
+  {
+    id: "#BK-1024",
+    customer: "Sarah Ahmed",
+    service: "Wedding Photography",
+    date: "Dec 15, 2026",
     status: "Pending",
   },
   {
-    id: "#ORD-2044",
-    customer: "Mahmud Karim",
-    product: "Mechanical Keyboard",
-    date: "Nov 18, 2026",
-    amount: "৳ 4,800",
-    status: "Delivered",
+    id: "#BK-1023",
+    customer: "Nusrat Jahan",
+    service: "Wedding Decoration",
+    date: "Dec 18, 2026",
+    status: "Accepted",
+  },
+  {
+    id: "#BK-1022",
+    customer: "Rahim Hasan",
+    service: "Wedding Catering",
+    date: "Dec 20, 2026",
+    status: "Rejected",
   },
 ];
 
-const products = [
+const serviceOverview = [
   {
-    name: "Wireless Headphone",
-    category: "Electronics",
-    sales: 124,
-    price: "৳ 3,450",
-    stock: 28,
-    image: "🎧",
+    title: "Active Services",
+    value: "09",
+    color: "text-green-600",
+    icon: CheckCircle2,
   },
   {
-    name: "Smart Watch Series 8",
-    category: "Accessories",
-    sales: 98,
-    price: "৳ 5,200",
-    stock: 15,
-    image: "⌚",
+    title: "Pending Approval",
+    value: "02",
+    color: "text-orange-500",
+    icon: Clock,
   },
   {
-    name: "Casual Backpack",
-    category: "Fashion",
-    sales: 76,
-    price: "৳ 2,850",
-    stock: 8,
-    image: "🎒",
+    title: "Inactive Services",
+    value: "01",
+    color: "text-gray-500",
+    icon: XCircle,
   },
 ];
 
-const chartData = [32, 48, 40, 68, 54, 85, 72, 92, 65, 80, 56, 96];
-
-const navigation = [
-  { name: "Overview", href: "/dashboard/vendor", icon: LayoutDashboard },
-  { name: "Products", href: "/dashboard/vendor/products", icon: Package },
-  { name: "Orders", href: "/dashboard/vendor/orders", icon: ShoppingCart },
-  { name: "Customers", href: "/dashboard/vendor/customers", icon: Users },
-  {
-    name: "Analytics",
-    href: "/dashboard/vendor/analytics",
-    icon: ChartNoAxesCombined,
-  },
-  { name: "Settings", href: "/dashboard/vendor/settings", icon: Settings },
-];
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    Processing: "bg-amber-50 text-amber-700 ring-amber-200",
-    Delivered: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    Shipped: "bg-blue-50 text-blue-700 ring-blue-200",
-    Pending: "bg-gray-100 text-gray-600 ring-gray-200",
-  };
-
+export default function VendorDashboardPage() {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-        styles[status] || styles.Pending
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
+    <main className="min-h-screen bg-[#fffaf7] p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-8">
 
-function SalesChart() {
-  const points = chartData
-    .map((value, index) => {
-      const x = 40 + index * 58;
-      const y = 190 - value * 1.55;
-      return `${x},${y}`;
-    })
-    .join(" ");
+        {/* Header */}
+        <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[#f45b4f]">
+              <Store size={17} />
+              Vendor Dashboard
+            </div>
 
-  const areaPoints = `40,190 ${points} 678,190`;
+            <h1 className="text-2xl font-bold text-[#302521] sm:text-3xl">
+              Welcome Back, Vendor!
+            </h1>
 
-  return (
-    <div className="mt-6">
-      <div className="flex justify-between text-xs text-gray-400">
-        <span>৳ 100k</span>
-        <span>৳ 75k</span>
-        <span>৳ 50k</span>
-        <span>৳ 25k</span>
-        <span>৳ 0</span>
-      </div>
+            <p className="mt-2 text-sm text-gray-500">
+              Manage your wedding business, services and customer bookings.
+            </p>
+          </div>
 
-      <div className="relative mt-2">
-        <svg
-          viewBox="0 0 700 220"
-          className="w-full overflow-visible"
-          preserveAspectRatio="none"
-        >
-          {[35, 75, 115, 155, 190].map((y) => (
-            <line
-              key={y}
-              x1="40"
-              y1={y}
-              x2="678"
-              y2={y}
-              stroke="#f0f0f0"
-              strokeDasharray="4 5"
-            />
-          ))}
+          <Link
+            href="/dashboard/vendor/services"
+            className="flex w-fit items-center gap-2 rounded-xl bg-[#f45b4f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#df493f]"
+          >
+            <Plus size={18} />
+            Add New Service
+          </Link>
+        </section>
 
-          <polygon points={areaPoints} fill="url(#salesGradient)" />
+        {/* Vendor Profile & Subscription */}
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
 
-          <defs>
-            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.01" />
-            </linearGradient>
-          </defs>
+          {/* Profile Card */}
+          <div className="flex items-center gap-4 rounded-2xl border border-[#f1e8e3] bg-white p-5 shadow-sm lg:col-span-2">
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-[#fff1ee] text-[#f45b4f]">
+              <Store size={30} />
+            </div>
 
-          <polyline
-            points={points}
-            fill="none"
-            stroke="#7c3aed"
-            strokeWidth="3"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-
-          {chartData.map((value, index) => (
-            <circle
-              key={index}
-              cx={40 + index * 58}
-              cy={190 - value * 1.55}
-              r="3.5"
-              fill="#7c3aed"
-              stroke="white"
-              strokeWidth="2"
-            />
-          ))}
-        </svg>
-      </div>
-
-      <div className="mt-3 flex justify-between text-xs text-gray-400">
-        {["01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23"].map(
-          (day) => (
-            <span key={day}>{day}</span>
-          )
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function VendorDashboard() {
-  return (
-    <div className="min-h-screen bg-[#f8f9fc] text-gray-800">
-      <div className="flex min-h-screen">
-        {/* Main Content */}
-        <main className="min-w-0 flex-1">
-
-          {/* Page Content */}
-          <div className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
-            {/* Heading */}
-            <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">
-                  Overview
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-bold text-[#302521]">
+                  Your Business Name
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Track your store performance and manage your business.
-                </p>
+                <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-600">
+                  Verified
+                </span>
               </div>
 
+              <p className="mt-1 text-sm text-gray-500">
+                Wedding Service Provider
+              </p>
+
               <Link
-                href="/dashboard/vendor/products/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-violet-200 transition hover:bg-violet-700"
+                href="/dashboard/vendor/profile"
+                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#f45b4f] hover:underline"
               >
-                <Plus size={17} />
-                Add Product
+                Edit Profile <ArrowRight size={15} />
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {stats.map((stat) => {
-                const Icon = stat.icon;
-
-                return (
-                  <div
-                    key={stat.title}
-                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-500">{stat.title}</p>
-                      <div className={`rounded-xl p-2.5 ${stat.color}`}>
-                        <Icon size={19} />
-                      </div>
-                    </div>
-
-                    <h3 className="mt-4 text-2xl font-bold tracking-tight text-gray-900">
-                      {stat.value}
-                    </h3>
-
-                    <div className="mt-3 flex items-center gap-1 text-xs">
-                      {stat.positive ? (
-                        <ArrowUpRight size={14} className="text-emerald-500" />
-                      ) : (
-                        <ArrowDownRight size={14} className="text-rose-500" />
-                      )}
-                      <span
-                        className={
-                          stat.positive
-                            ? "font-medium text-emerald-600"
-                            : "font-medium text-rose-500"
-                        }
-                      >
-                        {stat.change}
-                      </span>
-                      <span className="text-gray-400">vs last month</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Chart & Side Cards */}
-            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
-              {/* Revenue Chart */}
-              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      Revenue Overview
-                    </h3>
-                    <p className="mt-1 text-xs text-gray-400">
-                      Sales performance during this month
-                    </p>
-                  </div>
-
-                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs outline-none focus:border-violet-400">
-                    <option>This Month</option>
-                    <option>This Week</option>
-                    <option>This Year</option>
-                  </select>
-                </div>
-
-                <div className="mt-5 flex items-end gap-3">
-                  <h2 className="text-3xl font-bold text-gray-900">
-                    ৳ 84,250
-                  </h2>
-                  <span className="mb-1 flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600">
-                    <ArrowUpRight size={13} /> 12.8%
-                  </span>
-                </div>
-
-                <SalesChart />
-              </div>
-
-              {/* Order summary */}
-              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900">Order Summary</h3>
-                  <MoreHorizontal size={19} className="text-gray-400" />
-                </div>
-                <p className="mt-1 text-xs text-gray-400">
-                  Order status overview
-                </p>
-
-                <div className="mt-6 space-y-5">
-                  {[
-                    {
-                      label: "Completed",
-                      value: 68,
-                      count: 845,
-                      color: "bg-emerald-500",
-                    },
-                    {
-                      label: "Processing",
-                      value: 18,
-                      count: 224,
-                      color: "bg-violet-500",
-                    },
-                    {
-                      label: "Shipped",
-                      value: 10,
-                      count: 124,
-                      color: "bg-blue-500",
-                    },
-                    {
-                      label: "Pending",
-                      value: 4,
-                      count: 55,
-                      color: "bg-amber-400",
-                    },
-                  ].map((item) => (
-                    <div key={item.label}>
-                      <div className="mb-2 flex justify-between text-xs">
-                        <span className="font-medium text-gray-600">
-                          {item.label}
-                        </span>
-                        <span className="text-gray-400">{item.count}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-                        <div
-                          className={`h-full rounded-full ${item.color}`}
-                          style={{ width: `${item.value}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Link
-                  href="/dashboard/vendor/orders"
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-                >
-                  View all orders <ArrowUpRight size={14} />
-                </Link>
-              </div>
-            </div>
-
-            {/* Recent Orders */}
-            <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 p-5 sm:p-6">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Recent Orders</h3>
-                  <p className="mt-1 text-xs text-gray-400">
-                    Keep track of your latest orders
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/vendor/orders"
-                  className="text-xs font-semibold text-violet-600 hover:text-violet-700"
-                >
-                  View all →
-                </Link>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] text-left">
-                  <thead className="border-y border-gray-100 bg-gray-50/70">
-                    <tr className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
-                      <th className="px-6 py-3">Order ID</th>
-                      <th className="px-6 py-3">Customer</th>
-                      <th className="px-6 py-3">Product</th>
-                      <th className="px-6 py-3">Date</th>
-                      <th className="px-6 py-3">Amount</th>
-                      <th className="px-6 py-3">Status</th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-50">
-                    {orders.map((order) => (
-                      <tr
-                        key={order.id}
-                        className="transition hover:bg-gray-50/70"
-                      >
-                        <td className="px-6 py-4 text-xs font-semibold text-violet-600">
-                          {order.id}
-                        </td>
-                        <td className="px-6 py-4 text-xs font-medium text-gray-700">
-                          {order.customer}
-                        </td>
-                        <td className="px-6 py-4 text-xs text-gray-500">
-                          {order.product}
-                        </td>
-                        <td className="px-6 py-4 text-xs text-gray-400">
-                          {order.date}
-                        </td>
-                        <td className="px-6 py-4 text-xs font-semibold text-gray-700">
-                          {order.amount}
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusBadge status={order.status} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Products */}
-            <div className="mt-6 rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <div className="flex items-center justify-between p-5 sm:p-6">
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    Top Selling Products
-                  </h3>
-                  <p className="mt-1 text-xs text-gray-400">
-                    Your best performing products
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/vendor/products"
-                  className="text-xs font-semibold text-violet-600 hover:text-violet-700"
-                >
-                  All products →
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                {products.map((product) => (
-                  <div key={product.name} className="p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gray-50 text-2xl">
-                        {product.image}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-800">
-                          {product.name}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {product.category}
-                        </p>
-                        <p className="mt-2 text-sm font-bold text-gray-900">
-                          {product.price}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex justify-between border-t border-gray-100 pt-3 text-xs">
-                      <span className="text-gray-400">
-                        {product.sales} sold
-                      </span>
-                      <span
-                        className={
-                          product.stock <= 10
-                            ? "font-medium text-rose-500"
-                            : "text-gray-500"
-                        }
-                      >
-                        {product.stock} in stock
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 pb-4 text-xs text-gray-400">
-              <p>© 2026 MarketHub. Vendor Dashboard.</p>
-              <div className="flex gap-4">
-                <Link href="#" className="hover:text-gray-600">
-                  Help Center
-                </Link>
-                <Link href="#" className="hover:text-gray-600">
-                  Support
-                </Link>
-              </div>
-            </div>
+            <Link
+              href="/dashboard/vendor/profile"
+              className="hidden rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 sm:block"
+              aria-label="Edit profile"
+            >
+              <Pencil size={17} />
+            </Link>
           </div>
-        </main>
+
+          {/* Subscription Card */}
+          <div className="rounded-2xl bg-[#302521] p-5 text-white shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-orange-200">
+                <Crown size={19} />
+                <span className="text-sm font-semibold">Your Plan</span>
+              </div>
+
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs">
+                Active
+              </span>
+            </div>
+
+            <h2 className="mt-4 text-2xl font-bold">Free Plan</h2>
+
+            <p className="mt-1 text-sm text-gray-300">
+              Basic vendor subscription
+            </p>
+
+            <Link
+              href="/dashboard/vendor/subscription"
+              className="mt-5 flex items-center justify-between rounded-xl bg-[#f45b4f] px-4 py-3 text-sm font-semibold transition hover:bg-[#df493f]"
+            >
+              Explore Plans
+              <ArrowUpRight size={17} />
+            </Link>
+          </div>
+        </section>
+
+        {/* Statistics */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-[#302521]">
+              Business Overview
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Your business performance at a glance.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+
+              return (
+                <div
+                  key={stat.title}
+                  className="rounded-2xl border border-[#f1e8e3] bg-white p-5 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className={`rounded-xl p-3 ${stat.color}`}>
+                      <Icon size={22} />
+                    </div>
+                    <ArrowUpRight size={19} className="text-gray-300" />
+                  </div>
+
+                  <p className="mt-5 text-sm text-gray-500">
+                    {stat.title}
+                  </p>
+
+                  <h3 className="mt-1 text-2xl font-bold text-[#302521]">
+                    {stat.value}
+                  </h3>
+
+                  <p className="mt-1 text-xs text-gray-400">
+                    {stat.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Management Center */}
+        <section>
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-[#302521]">
+              Manage Your Business
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Everything you need to manage your vendor account.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {managementCards.map((card) => {
+              const Icon = card.icon;
+
+              return (
+                <Link
+                  key={card.title}
+                  href={card.href}
+                  className="group rounded-2xl border border-[#f1e8e3] bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#f45b4f]/40 hover:shadow-md sm:p-6"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className={`rounded-xl p-3 ${card.color}`}>
+                      <Icon size={25} />
+                    </div>
+
+                    <div className="flex size-9 items-center justify-center rounded-full bg-gray-50 transition group-hover:bg-[#fff1ee]">
+                      <ArrowUpRight
+                        size={19}
+                        className="text-gray-400 group-hover:text-[#f45b4f]"
+                      />
+                    </div>
+                  </div>
+
+                  <h3 className="mt-5 text-lg font-bold text-[#302521]">
+                    {card.title}
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                    {card.description}
+                  </p>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+                    <span className="text-sm font-semibold text-[#f45b4f]">
+                      {card.action}
+                    </span>
+                    <ArrowRight
+                      size={17}
+                      className="text-[#f45b4f] transition group-hover:translate-x-1"
+                    />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Service Overview */}
+        <section className="rounded-2xl border border-[#f1e8e3] bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-[#302521]">
+                Service Overview
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Current status of your listed services.
+              </p>
+            </div>
+
+            <Link
+              href="/dashboard/vendor/services"
+              className="text-sm font-semibold text-[#f45b4f] hover:underline"
+            >
+              View All
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {serviceOverview.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <div
+                  key={item.title}
+                  className="flex items-center gap-4 rounded-xl bg-[#fffaf7] p-4"
+                >
+                  <div className={`rounded-xl bg-white p-3 ${item.color}`}>
+                    <Icon size={22} />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      {item.title}
+                    </p>
+                    <h3 className="mt-1 text-xl font-bold text-[#302521]">
+                      {item.value}
+                    </h3>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Recent Booking Requests */}
+        <section className="overflow-hidden rounded-2xl border border-[#f1e8e3] bg-white shadow-sm">
+          <div className="flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center sm:p-6">
+            <div>
+              <h2 className="text-lg font-bold text-[#302521]">
+                Recent Booking Requests
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Keep track of your latest customer requests.
+              </p>
+            </div>
+
+            <Link
+              href="/dashboard/vendor/bookings"
+              className="flex items-center gap-2 text-sm font-semibold text-[#f45b4f] hover:underline"
+            >
+              View All Bookings
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-left">
+              <thead>
+                <tr className="border-y border-gray-100 bg-[#fffaf7] text-xs uppercase tracking-wide text-gray-500">
+                  <th className="px-6 py-4 font-semibold">Booking ID</th>
+                  <th className="px-6 py-4 font-semibold">Customer</th>
+                  <th className="px-6 py-4 font-semibold">Service</th>
+                  <th className="px-6 py-4 font-semibold">Event Date</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-100">
+                {bookings.map((booking) => (
+                  <tr key={booking.id} className="transition hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-semibold text-[#302521]">
+                      {booking.id}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {booking.customer}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {booking.service}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {booking.date}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                          booking.status === "Accepted"
+                            ? "bg-green-50 text-green-600"
+                            : booking.status === "Rejected"
+                              ? "bg-red-50 text-red-600"
+                              : "bg-orange-50 text-orange-600"
+                        }`}
+                      >
+                        {booking.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-t border-gray-100 px-6 py-4">
+            <Link
+              href="/dashboard/vendor/bookings"
+              className="flex items-center justify-center gap-2 text-sm font-semibold text-[#f45b4f] hover:underline"
+            >
+              Manage All Booking Requests
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </section>
+
+        {/* Bottom Banner */}
+        <section className="rounded-2xl bg-[#302521] p-6 text-white sm:p-8">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-sm text-orange-200">
+                <Sparkles size={18} />
+                Grow Your Wedding Business
+              </div>
+
+              <h2 className="text-xl font-bold">
+                Ready to Reach More Customers?
+              </h2>
+
+              <p className="mt-2 max-w-xl text-sm leading-6 text-gray-300">
+                Explore subscription plans to unlock more opportunities
+                and grow your business on phWedPlan.
+              </p>
+            </div>
+
+            <Link
+              href="/dashboard/vendor/subscription"
+              className="flex w-fit shrink-0 items-center gap-2 rounded-xl bg-[#f45b4f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#df493f]"
+            >
+              Explore Plans
+              <ArrowUpRight size={17} />
+            </Link>
+          </div>
+        </section>
+
       </div>
-    </div>
+    </main>
   );
 }
