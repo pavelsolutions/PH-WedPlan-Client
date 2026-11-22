@@ -431,7 +431,7 @@ export default function VendorDashboardPage() {
               )}
 
               <Link
-                href="/dashboard/vendor/profile"
+                href="/dashboard/profile"
                 className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#f45b4f] hover:underline"
               >
                 Edit Profile
