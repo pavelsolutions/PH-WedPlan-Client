@@ -286,7 +286,7 @@ export default function VendorDashboardPage() {
       title: "Vendor Profile",
       description:
         "Manage your business information and contact details.",
-      href: "/dashboard/vendor/profile",
+      href: "/dashboard/profile",
       icon: Store,
       color: "bg-blue-50 text-blue-600",
       action: "Manage Profile",
@@ -416,7 +416,7 @@ export default function VendorDashboardPage() {
 
             <div className="min-w-0 flex-1">
               <h2 className="font-bold text-[#302521]">
-                {profile?.businessName || profile?.name || "Your Business"}
+                {profile?.name || "Your Business"}
               </h2>
 
               <p className="mt-1 text-sm text-gray-500">
