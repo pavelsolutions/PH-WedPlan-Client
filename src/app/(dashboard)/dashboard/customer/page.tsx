@@ -200,10 +200,6 @@ export default function CustomerDashboardPage() {
                 ? bookingData.bookings
                 : [];
 
-        console.log("Customer ID:", customerId);
-        console.log("Booking API Response:", bookingData);
-        console.log("Customer Bookings:", bookingList);
-
         setBookings(bookingList);
 
         const serviceList = Array.isArray(serviceData)

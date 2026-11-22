@@ -83,7 +83,7 @@ export default function DashboardShell({
 
       toast.success("Logged out successfully!");
 
-      router.push("/signin");
+      router.push("/");
       router.refresh();
     } catch (error) {
       toast.error(

@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -59,8 +60,6 @@ export default function VendorDashboardPage() {
 
       const data = await getProfile(userId);
 
-      console.log("Fetched vendor profile:", data);
-
       setProfile(data);
 
       setFormData({
@@ -88,7 +87,7 @@ export default function VendorDashboardPage() {
     }
   };
 
-  // Load profile when session is available
+  // Load Profile
   useEffect(() => {
     if (isPending) return;
 
@@ -103,7 +102,7 @@ export default function VendorDashboardPage() {
     fetchProfile(userId);
   }, [session?.user?.id, isPending]);
 
-  // Handle input change
+  // Handle Input Change
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -115,7 +114,7 @@ export default function VendorDashboardPage() {
     }));
   };
 
-  // Handle photo selection and preview
+  // Handle Photo Change
   const handlePhotoChange = (
     e: ChangeEvent<HTMLInputElement>
   ) => {
@@ -135,76 +134,65 @@ export default function VendorDashboardPage() {
       return;
     }
 
-    // Remove previous blob preview
     if (preview?.startsWith("blob:")) {
       URL.revokeObjectURL(preview);
     }
 
-    const imagePreview = URL.createObjectURL(file);
-
     setPhoto(file);
-    setPreview(imagePreview);
+    setPreview(URL.createObjectURL(file));
   };
 
-  // Save Profile + Upload Photo
-const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
+  // Save Profile
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  console.log("Selected photo:", photo);
-  console.log("Current profile image:", profile?.image);
-
-  if (!session?.user?.id || !profile) {
-    toast.error("Profile not found");
-    return;
-  }
-
-  try {
-    setIsSaving(true);
-
-    let imageUrl = profile.image || "";
-
-    if (photo) {
-      console.log("Starting image upload...");
-
-      imageUrl = await uploadImage(photo);
-
-      console.log("Upload completed!");
-      console.log("Uploaded URL:", imageUrl);
+    if (!session?.user?.id || !profile) {
+      toast.error("Profile not found");
+      return;
     }
 
-    const payload = {
-      ...formData,
-      image: imageUrl,
-    };
+    try {
+      setIsSaving(true);
 
-    const updatedProfile = await updateProfile(
-      session.user.id,
-      payload
-    );
+      let imageUrl = profile.image || "";
 
-    setProfile(updatedProfile);
-    setPreview(updatedProfile.image || imageUrl || null);
-    setPhoto(null);
+      if (photo) {
+        imageUrl = await uploadImage(photo);
+      }
 
-    toast.success("Profile updated successfully!");
-  } catch (error) {
-    console.error("Profile update error:", error);
+      const payload = {
+        ...formData,
+        image: imageUrl,
+      };
 
-    toast.error(
-      error instanceof Error
-        ? error.message
-        : "Failed to update profile"
-    );
-  } finally {
-    setIsSaving(false);
-  }
-};
+      const updatedProfile = await updateProfile(
+        session.user.id,
+        payload
+      );
 
-  // Reset changes
+      setProfile(updatedProfile);
+
+      setPreview(updatedProfile.image || imageUrl || null);
+      setPhoto(null);
+
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Profile update error:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update profile"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Reset Changes
   const handleReset = () => {
     if (!session?.user?.id) return;
 
-    // Revoke temporary preview URL
     if (preview?.startsWith("blob:")) {
       URL.revokeObjectURL(preview);
     }
@@ -213,29 +201,29 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     fetchProfile(session.user.id);
   };
 
-  // Shared input style
+  // Shared Styles
   const inputClass =
-    "w-full rounded-xl border border-[#eadfd9] bg-white px-4 py-3 text-sm text-[#421b24] outline-none transition placeholder:text-[#b49fa2] focus:border-[#922638] focus:ring-2 focus:ring-[#922638]/10 disabled:cursor-not-allowed disabled:bg-[#f8f5f3]";
+    "w-full rounded-lg border border-[#eadfd9] bg-white px-3.5 py-2.5 text-sm text-[#421b24] outline-none transition placeholder:text-[#b49fa2] focus:border-[#922638] focus:ring-2 focus:ring-[#922638]/10 disabled:cursor-not-allowed disabled:bg-[#f8f5f3]";
 
   const labelClass =
-    "mb-2 block text-sm font-semibold text-[#421b24]";
+    "mb-1.5 block text-xs font-semibold text-[#421b24]";
 
   // Loading
   if (isPending || isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#922638]" />
+      <div className="flex min-h-[350px] items-center justify-center">
+        <Loader2 className="h-7 w-7 animate-spin text-[#922638]" />
       </div>
     );
   }
 
-  // Not logged in
+  // Not Logged In
   if (!session?.user?.id) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <UserRound className="h-12 w-12 text-[#b49fa2]" />
+      <div className="flex min-h-[350px] flex-col items-center justify-center gap-3">
+        <UserRound className="h-10 w-10 text-[#b49fa2]" />
 
-        <h2 className="text-lg font-semibold text-[#421b24]">
+        <h2 className="font-semibold text-[#421b24]">
           Please sign in
         </h2>
 
@@ -246,11 +234,11 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     );
   }
 
-  // Profile not found
+  // Profile Not Found
   if (!profile) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-        <UserRound className="h-12 w-12 text-[#b49fa2]" />
+      <div className="flex min-h-[350px] flex-col items-center justify-center gap-4">
+        <UserRound className="h-10 w-10 text-[#b49fa2]" />
 
         <p className="text-sm text-[#8b7478]">
           Unable to load your profile.
@@ -258,9 +246,9 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
         <button
           onClick={() => fetchProfile(session.user.id)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#922638] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#922638] px-4 py-2 text-sm font-semibold text-white hover:bg-[#761d2e]"
         >
-          <RefreshCw size={16} />
+          <RefreshCw size={15} />
           Try Again
         </button>
       </div>
@@ -268,34 +256,34 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#fcfaf9] p-4 sm:p-7 lg:p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <div className="min-h-screen bg-[#fcfaf9] p-3 sm:p-5 lg:p-6">
+      <div className="mx-auto max-w-4xl space-y-4">
 
-        {/* Page Header */}
+        {/* Header */}
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h1 className="font-serif text-2xl font-bold text-[#421b24] sm:text-3xl">
+            <h1 className="font-serif text-2xl font-bold text-[#421b24]">
               Vendor Profile
             </h1>
 
-            <p className="mt-2 text-sm text-[#8b7478]">
-              Manage your personal information and business details.
+            <p className="mt-1 text-xs text-[#8b7478]">
+              Manage your personal and business information.
             </p>
           </div>
 
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f8e9ec] px-4 py-2 text-xs font-semibold capitalize text-[#922638]">
-            <Store size={15} />
+          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f8e9ec] px-3 py-1.5 text-xs font-semibold capitalize text-[#922638]">
+            <Store size={14} />
             {profile.role || "Vendor"} Account
           </span>
         </div>
 
         {/* Profile Overview */}
-        <div className="overflow-hidden rounded-2xl border border-[#eadfd9] bg-white shadow-sm">
-          <div className="h-28 bg-gradient-to-r from-[#761d2e] to-[#b64c60]" />
+        <div className="overflow-hidden rounded-xl border border-[#eadfd9] bg-white shadow-sm">
+          <div className="h-20 bg-gradient-to-r from-[#761d2e] to-[#b64c60]" />
 
-          <div className="px-5 pb-6 sm:px-7">
-            <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#922638] text-3xl font-bold text-white shadow-md">
+          <div className="px-4 pb-4 sm:px-5">
+            <div className="-mt-9 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-xl border-[3px] border-white bg-[#922638] text-2xl font-bold text-white shadow-sm">
                 {preview ? (
                   <img
                     src={preview}
@@ -307,62 +295,63 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                 )}
               </div>
 
-              <div className="flex-1 pb-1">
-                <h2 className="text-xl font-bold text-[#421b24]">
+              <div className="min-w-0 flex-1 pb-1">
+                <h2 className="truncate text-base font-bold text-[#421b24]">
                   {profile.name || "Unnamed User"}
                 </h2>
 
-                <p className="mt-1 flex items-center gap-2 text-sm text-[#8b7478]">
-                  <Mail size={15} />
+                <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-[#8b7478]">
+                  <Mail size={13} />
                   {profile.email}
                 </p>
 
                 {profile.businessName && (
-                  <p className="mt-1 flex items-center gap-2 text-sm text-[#8b7478]">
-                    <Store size={15} />
+                  <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-[#8b7478]">
+                    <Store size={13} />
                     {profile.businessName}
                   </p>
                 )}
               </div>
 
               <span
-                className={`mb-1 inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                className={`mb-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                   profile.isBlocked
                     ? "bg-red-50 text-red-600"
                     : "bg-green-50 text-green-700"
                 }`}
               >
-                <span className="h-2 w-2 rounded-full bg-current" />
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {profile.isBlocked ? "Blocked" : "Active"}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Profile Edit Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Edit Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* Personal Information */}
-          <div className="rounded-2xl border border-[#eadfd9] bg-white p-5 shadow-sm sm:p-7">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f8e9ec] text-[#922638]">
-                <User size={20} />
+          <div className="rounded-xl border border-[#eadfd9] bg-white p-4 shadow-sm sm:p-5">
+
+            <div className="mb-4 flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f8e9ec] text-[#922638]">
+                <User size={17} />
               </div>
 
               <div>
-                <h2 className="text-lg font-bold text-[#421b24]">
+                <h2 className="text-sm font-bold text-[#421b24]">
                   Personal Information
                 </h2>
 
-                <p className="text-xs text-[#8b7478]">
+                <p className="text-[11px] text-[#8b7478]">
                   Update your personal details.
                 </p>
               </div>
             </div>
 
             {/* Profile Photo */}
-            <div className="mb-6 flex flex-col gap-4 rounded-xl border border-dashed border-[#eadfd9] bg-[#fcfaf9] p-4 sm:flex-row sm:items-center">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#eadfd9] bg-[#922638] text-xl font-bold text-white">
+            <div className="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-[#eadfd9] bg-[#fcfaf9] p-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#922638] text-lg font-bold text-white">
                 {preview ? (
                   <img
                     src={preview}
@@ -374,25 +363,25 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                 )}
               </div>
 
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-[#421b24]">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xs font-semibold text-[#421b24]">
                   Profile Photo
                 </h3>
 
-                <p className="mt-1 text-xs text-[#8b7478]">
-                  PNG, JPG or WebP. Maximum 5MB.
+                <p className="mt-1 text-[11px] text-[#8b7478]">
+                  PNG, JPG or WebP · Maximum 5MB
                 </p>
 
                 {photo && (
-                  <p className="mt-1 text-xs font-medium text-[#922638]">
-                    New photo selected. Save changes to apply.
+                  <p className="mt-1 text-[11px] font-medium text-[#922638]">
+                    New photo selected.
                   </p>
                 )}
               </div>
 
-              <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-[#eadfd9] bg-white px-4 py-2.5 text-sm font-semibold text-[#421b24] transition hover:border-[#922638] hover:text-[#922638]">
-                <Camera size={16} />
-                Choose Photo
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#eadfd9] bg-white px-3 py-2 text-xs font-semibold text-[#421b24] transition hover:border-[#922638] hover:text-[#922638]">
+                <Camera size={14} />
+                Change Photo
 
                 <input
                   type="file"
@@ -404,13 +393,13 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
               </label>
             </div>
 
-            {/* Input Fields */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
               {/* Full Name */}
               <div>
                 <label className={labelClass}>
-                  Full Name <span className="text-[#922638">*</span>
+                  Full Name <span className="text-[#922638]">*</span>
                 </label>
 
                 <input
@@ -433,7 +422,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
                 <div className="relative">
                   <Mail
-                    size={17}
+                    size={15}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a18c90]"
                   />
 
@@ -441,13 +430,9 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                     type="email"
                     value={profile.email || ""}
                     disabled
-                    className={`${inputClass} cursor-not-allowed bg-[#f8f5f3] pl-10`}
+                    className={`${inputClass} cursor-not-allowed bg-[#f8f5f3] pl-9`}
                   />
                 </div>
-
-                <p className="mt-1.5 text-xs text-[#a18c90]">
-                  Email cannot be changed here.
-                </p>
               </div>
 
               {/* Phone */}
@@ -458,7 +443,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
                 <div className="relative">
                   <Phone
-                    size={17}
+                    size={15}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a18c90]"
                   />
 
@@ -469,7 +454,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                     onChange={handleChange}
                     placeholder="+880 1XXXXXXXXX"
                     disabled={isSaving}
-                    className={`${inputClass} pl-10`}
+                    className={`${inputClass} pl-9`}
                   />
                 </div>
               </div>
@@ -482,7 +467,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
                 <div className="relative">
                   <MapPin
-                    size={17}
+                    size={15}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a18c90]"
                   />
 
@@ -493,7 +478,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                     onChange={handleChange}
                     placeholder="Enter your city"
                     disabled={isSaving}
-                    className={`${inputClass} pl-10`}
+                    className={`${inputClass} pl-9`}
                   />
                 </div>
               </div>
@@ -507,7 +492,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
                   <div className="relative">
                     <Store
-                      size={17}
+                      size={15}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a18c90]"
                     />
 
@@ -516,9 +501,9 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                       name="businessName"
                       value={formData.businessName}
                       onChange={handleChange}
-                      placeholder="Enter your business or studio name"
+                      placeholder="Enter your business name"
                       disabled={isSaving}
-                      className={`${inputClass} pl-10`}
+                      className={`${inputClass} pl-9`}
                     />
                   </div>
                 </div>
@@ -532,53 +517,53 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
                 <div className="relative">
                   <FileText
-                    size={17}
-                    className="absolute left-3 top-4 text-[#a18c90]"
+                    size={15}
+                    className="absolute left-3 top-3 text-[#a18c90]"
                   />
 
                   <textarea
                     name="bio"
                     value={formData.bio}
                     onChange={handleChange}
-                    rows={5}
+                    rows={3}
                     maxLength={500}
                     disabled={isSaving}
-                    placeholder="Tell customers about yourself, your business, experience and services..."
-                    className={`${inputClass} resize-none pl-10`}
+                    placeholder="Tell customers about yourself and your business..."
+                    className={`${inputClass} resize-none pl-9`}
                   />
                 </div>
 
-                <p className="mt-1.5 text-right text-xs text-[#a18c90]">
+                <p className="mt-1 text-right text-[10px] text-[#a18c90]">
                   {formData.bio.length}/500 characters
                 </p>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="mt-7 flex flex-col-reverse gap-3 border-t border-[#f0e8e4] pt-6 sm:flex-row sm:justify-end">
+            {/* Form Actions */}
+            <div className="mt-5 flex flex-col-reverse gap-2 border-t border-[#f0e8e4] pt-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={handleReset}
                 disabled={isSaving || isLoading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#eadfd9] bg-white px-5 py-3 text-sm font-semibold text-[#421b24] transition hover:bg-[#fcfaf9] disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#eadfd9] bg-white px-4 py-2.5 text-xs font-semibold text-[#421b24] transition hover:bg-[#fcfaf9] disabled:opacity-50"
               >
-                <RefreshCw size={16} />
-                Reset Changes
+                <RefreshCw size={14} />
+                Reset
               </button>
 
               <button
                 type="submit"
                 disabled={isSaving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#922638] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#761d2e] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#922638] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#761d2e] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSaving ? (
                   <>
-                    <Loader2 size={17} className="animate-spin" />
+                    <Loader2 size={15} className="animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save size={17} />
+                    <Save size={15} />
                     Save Changes
                   </>
                 )}
@@ -588,65 +573,66 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         </form>
 
         {/* Account Information */}
-        <div className="rounded-2xl border border-[#eadfd9] bg-white p-5 shadow-sm sm:p-7">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f8e9ec] text-[#922638]">
-              <ShieldCheck size={20} />
+        <div className="rounded-xl border border-[#eadfd9] bg-white p-4 shadow-sm sm:p-5">
+
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f8e9ec] text-[#922638]">
+              <ShieldCheck size={17} />
             </div>
 
             <div>
-              <h2 className="text-lg font-bold text-[#421b24]">
+              <h2 className="text-sm font-bold text-[#421b24]">
                 Account Information
               </h2>
 
-              <p className="text-xs text-[#8b7478]">
+              <p className="text-[11px] text-[#8b7478]">
                 Your account and subscription details.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
             {/* Account Status */}
-            <div className="flex items-start gap-3 rounded-xl bg-[#fcfaf9] p-4">
-              <ShieldCheck className="mt-1 text-[#922638]" size={20} />
+            <div className="flex items-center gap-3 rounded-lg bg-[#fcfaf9] p-3">
+              <ShieldCheck size={18} className="shrink-0 text-[#922638]" />
 
               <div>
-                <p className="text-xs text-[#8b7478]">
+                <p className="text-[11px] text-[#8b7478]">
                   Account Status
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-[#421b24]">
+                <p className="mt-0.5 text-xs font-semibold text-[#421b24]">
                   {profile.isBlocked ? "Blocked" : "Active"}
                 </p>
               </div>
             </div>
 
             {/* Business Name */}
-            <div className="flex items-start gap-3 rounded-xl bg-[#fcfaf9] p-4">
-              <Store className="mt-1 text-[#922638]" size={20} />
+            <div className="flex items-center gap-3 rounded-lg bg-[#fcfaf9] p-3">
+              <Store size={18} className="shrink-0 text-[#922638]" />
 
-              <div>
-                <p className="text-xs text-[#8b7478]">
+              <div className="min-w-0">
+                <p className="text-[11px] text-[#8b7478]">
                   Business Name
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-[#421b24]">
+                <p className="mt-0.5 truncate text-xs font-semibold text-[#421b24]">
                   {profile.businessName || "Not added"}
                 </p>
               </div>
             </div>
 
-            {/* Expiry */}
-            <div className="flex items-start gap-3 rounded-xl bg-[#fcfaf9] p-4">
-              <CalendarDays className="mt-1 text-[#922638]" size={20} />
+            {/* Subscription Expiry */}
+            <div className="flex items-center gap-3 rounded-lg bg-[#fcfaf9] p-3">
+              <CalendarDays size={18} className="shrink-0 text-[#922638]" />
 
               <div>
-                <p className="text-xs text-[#8b7478]">
+                <p className="text-[11px] text-[#8b7478]">
                   Subscription Expiry
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-[#421b24]">
+                <p className="mt-0.5 text-xs font-semibold text-[#421b24]">
                   {profile.subscriptionExpiresAt
                     ? new Date(
                         profile.subscriptionExpiresAt
@@ -656,16 +642,16 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
               </div>
             </div>
 
-            {/* Subscription */}
-            <div className="flex items-start gap-3 rounded-xl bg-[#fcfaf9] p-4">
-              <ShieldCheck className="mt-1 text-[#922638]" size={20} />
+            {/* Subscription Plan */}
+            <div className="flex items-center gap-3 rounded-lg bg-[#fcfaf9] p-3">
+              <ShieldCheck size={18} className="shrink-0 text-[#922638]" />
 
               <div>
-                <p className="text-xs text-[#8b7478]">
+                <p className="text-[11px] text-[#8b7478]">
                   Subscription Plan
                 </p>
 
-                <p className="mt-1 text-sm font-semibold capitalize text-[#421b24]">
+                <p className="mt-0.5 text-xs font-semibold capitalize text-[#421b24]">
                   {profile.subscriptionPlan || "Free"}
                 </p>
               </div>
