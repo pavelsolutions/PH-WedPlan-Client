@@ -38,7 +38,6 @@ export default function HeroSection() {
                     <div className="mt-8 flex flex-wrap items-center gap-4">
                         <div className="mt-8 flex w-full justify-center lg:justify-start">
                             <Button
-                                asChild
                                 size="lg"
                                 className="h-12 min-w-[230px] rounded-full bg-[#f45b4f] px-7 text-white shadow-lg shadow-[#f45b4f]/20 hover:bg-[#df493e]"
                             >

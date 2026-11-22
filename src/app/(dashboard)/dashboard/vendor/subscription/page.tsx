@@ -33,11 +33,17 @@ export default async function VendorSubscriptionPage() {
   const paymentsCollection = db.collection("payments");
 
   // 5. Find user from USER collection
-  const vendor = await usersCollection.findOne({
-    _id: ObjectId.isValid(vendorId)
-      ? new ObjectId(vendorId)
-      : vendorId,
-  });
+const vendorObjectId = ObjectId.isValid(vendorId)
+  ? new ObjectId(vendorId)
+  : null;
+
+if (!vendorObjectId) {
+  throw new Error("Invalid vendor ID");
+}
+
+const vendor = await usersCollection.findOne({
+  _id: vendorObjectId,
+});
 
   // 6. Get actual subscription plan from user document
   const subscriptionPlan = String(

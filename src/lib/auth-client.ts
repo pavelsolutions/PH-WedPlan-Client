@@ -2,33 +2,16 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields } from "better-auth/client/plugins";
+import { inferAdditionalFields, jwtClient } from "better-auth/client/plugins";
+
+import type { auth } from "@/lib/auth";
 
 export const authClient = createAuthClient({
   baseURL:
-    process.env.BETTER_AUTH_URL ||
-    "http://localhost:3000",
+    process.env.BETTER_AUTH_URL,
 
   plugins: [
-    inferAdditionalFields({
-      user: {
-        role: {
-          type: "string",
-        },
-        isBlocked: {
-          type: "boolean",
-        },
-        businessName: {
-          type: "string",
-        },
-        subscriptionPlan: {
-          type: "string",
-        },
-        subscriptionExpiresAt: {
-          type: "date",
-        },
-      },
-    }),
+    inferAdditionalFields<typeof auth>(),jwtClient() 
   ],
 });
 

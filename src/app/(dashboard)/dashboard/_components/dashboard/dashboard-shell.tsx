@@ -118,7 +118,7 @@ export default function DashboardShell({
                 open={mobileOpen}
                 onOpenChange={setMobileOpen}
               >
-                <SheetTrigger asChild>
+                <SheetTrigger>
                   <Button
                     variant="outline"
                     size="icon"

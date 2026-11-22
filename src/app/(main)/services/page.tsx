@@ -44,6 +44,7 @@ const categories = [
 ];
 
 export default function ServicesPage() {
+
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -401,7 +402,7 @@ export default function ServicesPage() {
               {/* CATEGORY */}
               <Select
                 value={category}
-                onValueChange={setCategory}
+                onValueChange={(value) => setCategory(value ?? "all")}
               >
                 <SelectTrigger className="h-12 rounded-xl border-[#E7DAD2] bg-[#FFFCFB] text-sm">
                   <SelectValue placeholder="All Categories" />
@@ -526,7 +527,7 @@ export default function ServicesPage() {
 
                   <Select
                     value={rating}
-                    onValueChange={setRating}
+                     onValueChange={(value) => setRating(value ?? "all")}
                   >
                     <SelectTrigger className="h-11 rounded-xl border-[#E7DAD2] bg-white">
                       <SelectValue placeholder="Any Rating" />
@@ -678,7 +679,7 @@ export default function ServicesPage() {
               Sort by
             </span>
 
-            <Select value={sort} onValueChange={setSort}>
+            <Select value={sort} onValueChange={(value) => setSort(value ?? "default")}>
               <SelectTrigger className="h-10 w-[190px] rounded-xl border-[#E7DAD2] bg-white text-sm">
                 <SelectValue placeholder="Sort services" />
               </SelectTrigger>

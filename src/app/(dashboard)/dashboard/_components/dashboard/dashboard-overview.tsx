@@ -217,7 +217,6 @@ export default function DashboardOverview({
 
           {role === "vendor" && (
             <Button
-              asChild
               className="rounded-xl bg-[#f45b4f] text-white hover:bg-[#df493e]"
             >
               <Link href="/dashboard/services/add">
@@ -229,7 +228,6 @@ export default function DashboardOverview({
 
           {role === "customer" && (
             <Button
-              asChild
               className="rounded-xl bg-[#f45b4f] text-white hover:bg-[#df493e]"
             >
               <Link href="/services">
@@ -241,7 +239,6 @@ export default function DashboardOverview({
 
           {role === "admin" && (
             <Button
-              asChild
               className="rounded-xl bg-[#f45b4f] text-white hover:bg-[#df493e]"
             >
               <Link href="/dashboard/users">

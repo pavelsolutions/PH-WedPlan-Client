@@ -74,27 +74,3 @@ export interface Transaction {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// Generic API Response
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
-// Service API Responses
-export type IServiceResponse = ApiResponse<IService>;
-
-export type IServicesResponse = ApiResponse<IService[]>;
-
-export type ICreateServiceResponse = ApiResponse<{
-  insertedId: string;
-}>;
-
-export type IUpdateServiceResponse = ApiResponse<{
-  modifiedCount: number;
-}>;
-
-export type IDeleteServiceResponse = ApiResponse<{
-  deletedCount: number;
-}>;

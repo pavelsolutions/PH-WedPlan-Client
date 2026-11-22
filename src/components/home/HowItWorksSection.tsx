@@ -112,7 +112,6 @@ export default function HowItWorksSection() {
 
                     <div className="mt-7 flex w-full justify-center">
                         <Button
-                            asChild
                             size="lg"
                             className="h-12 min-w-[160px] whitespace-nowrap rounded-full bg-[#f45b4f] px-7 text-white hover:bg-[#df493e]"
                         >

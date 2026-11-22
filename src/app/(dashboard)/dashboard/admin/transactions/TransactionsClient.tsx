@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDownToLine,
+  ArrowUpRight,
   CheckCircle2,
   Clock3,
   CreditCard,
@@ -33,6 +34,8 @@ type Props = {
   transactions: Transaction[];
 };
 
+const RED = "#dc2027";
+
 function money(amount: number, currency = "usd") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -47,6 +50,18 @@ function formatDate(date: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+function formatDateTime(date: string | null) {
+  if (!date) return "—";
+
+  return new Date(date).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -84,105 +99,57 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="px-6 py-16 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5F5F6] text-[#9999A0]">
-        <Search className="h-6 w-6" />
-      </div>
-
-      <h3 className="mt-4 text-sm font-semibold text-[#303037]">
-        No transactions found
-      </h3>
-
-      <p className="mt-2 text-xs text-[#96969C]">
-        Try changing your search or status filter.
-      </p>
-    </div>
-  );
-}
-
 export default function TransactionsClient({
   transactions,
 }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // =========================================
-  // 1. Remove zero / negative amount records
-  // =========================================
-  const actualTransactions = useMemo(() => {
-    return transactions.filter(
-      (transaction) =>
-        Number(transaction.amount) > 0
-    );
-  }, [transactions]);
+  // Filter transactions
+const filteredTransactions = useMemo(() => {
+  const query = search.toLowerCase().trim();
 
-  // =========================================
-  // 2. Calculate statistics from actual payments
-  // =========================================
-  const paidTransactions = actualTransactions.filter(
-    (transaction) =>
-      transaction.status.toLowerCase() === "paid"
+  return transactions.filter((transaction) => {
+    // Hide zero or negative amount transactions
+    if (transaction.amount <= 0) {
+      return false;
+    }
+
+    const matchesSearch =
+      !query ||
+      transaction.vendorName.toLowerCase().includes(query) ||
+      transaction.vendorEmail.toLowerCase().includes(query) ||
+      transaction.transactionId.toLowerCase().includes(query) ||
+      transaction.sessionId.toLowerCase().includes(query) ||
+      transaction.vendorId.toLowerCase().includes(query);
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      transaction.status.toLowerCase() === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+}, [transactions, search, statusFilter]);
+
+  // Stats
+  const paidTransactions = transactions.filter(
+    (transaction) => transaction.status === "paid"
   );
 
-  const pendingTransactions = actualTransactions.filter(
-    (transaction) =>
-      transaction.status.toLowerCase() === "pending"
+  const pendingTransactions = transactions.filter(
+    (transaction) => transaction.status === "pending"
   );
 
-  const failedTransactions = actualTransactions.filter(
-    (transaction) =>
-      transaction.status.toLowerCase() === "failed"
+  const failedTransactions = transactions.filter(
+    (transaction) => transaction.status === "failed"
   );
 
   const totalRevenue = paidTransactions.reduce(
-    (sum, transaction) =>
-      sum + Number(transaction.amount || 0),
+    (sum, transaction) => sum + transaction.amount,
     0
   );
 
-  // =========================================
-  // 3. Search + status filtering
-  // =========================================
-  const filteredTransactions = useMemo(() => {
-    const query = search.toLowerCase().trim();
-
-    return actualTransactions.filter((transaction) => {
-      const matchesSearch =
-        !query ||
-        transaction.vendorName
-          .toLowerCase()
-          .includes(query) ||
-        transaction.vendorEmail
-          .toLowerCase()
-          .includes(query) ||
-        transaction.transactionId
-          .toLowerCase()
-          .includes(query) ||
-        transaction.sessionId
-          .toLowerCase()
-          .includes(query) ||
-        transaction.vendorId
-          .toLowerCase()
-          .includes(query);
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        transaction.status.toLowerCase() ===
-          statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [
-    actualTransactions,
-    search,
-    statusFilter,
-  ]);
-
-  // =========================================
-  // 4. Export filtered payment records as CSV
-  // =========================================
+  // CSV export
   const exportCSV = () => {
     const headers = [
       "Vendor",
@@ -196,34 +163,26 @@ export default function TransactionsClient({
       "Payment Date",
     ];
 
-    const rows = filteredTransactions.map(
-      (transaction) => [
-        transaction.vendorName,
-        transaction.vendorEmail,
-        transaction.transactionId,
-        transaction.sessionId,
-        transaction.plan,
-        transaction.amount,
-        transaction.currency,
-        transaction.status,
-        transaction.paymentDate || "",
-      ]
-    );
+    const rows = filteredTransactions.map((transaction) => [
+      transaction.vendorName,
+      transaction.vendorEmail,
+      transaction.transactionId,
+      transaction.sessionId,
+      transaction.plan,
+      transaction.amount,
+      transaction.currency,
+      transaction.status,
+      transaction.paymentDate || "",
+    ]);
 
     const escapeCSV = (value: string | number) => {
-      const text = String(value ?? "").replace(
-        /"/g,
-        '""'
-      );
-
+      const text = String(value ?? "").replace(/"/g, '""');
       return `"${text}"`;
     };
 
     const csvContent = [
       headers.map(escapeCSV).join(","),
-      ...rows.map((row) =>
-        row.map(escapeCSV).join(",")
-      ),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
     ].join("\n");
 
     const blob = new Blob([csvContent], {
@@ -267,8 +226,7 @@ export default function TransactionsClient({
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-[#85858D]">
-              Monitor payments, revenue and vendor
-              membership transactions.
+              Monitor payments, revenue and vendor membership transactions.
             </p>
           </div>
 
@@ -284,7 +242,7 @@ export default function TransactionsClient({
         {/* ================= STATS ================= */}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-          {/* Total Revenue */}
+          {/* Revenue */}
           <div className="rounded-2xl border border-[#E9E9EC] bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-[#777780]">
@@ -318,11 +276,11 @@ export default function TransactionsClient({
             </div>
 
             <h2 className="mt-5 text-2xl font-semibold tracking-tight text-[#202024]">
-              {actualTransactions.length}
+              {transactions.length}
             </h2>
 
             <p className="mt-1 text-xs text-[#96969C]">
-              Paid and payment-related records
+              All recorded payments
             </p>
           </div>
 
@@ -343,11 +301,11 @@ export default function TransactionsClient({
             </h2>
 
             <p className="mt-1 text-xs text-[#96969C]">
-              Completed payments
+              Completed transactions
             </p>
           </div>
 
-          {/* Pending / Failed */}
+          {/* Pending */}
           <div className="rounded-2xl border border-[#E9E9EC] bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-[#777780]">
@@ -360,18 +318,16 @@ export default function TransactionsClient({
             </div>
 
             <h2 className="mt-5 text-2xl font-semibold tracking-tight text-[#202024]">
-              {pendingTransactions.length +
-                failedTransactions.length}
+              {pendingTransactions.length + failedTransactions.length}
             </h2>
 
             <p className="mt-1 text-xs text-[#96969C]">
-              {pendingTransactions.length} pending ·{" "}
-              {failedTransactions.length} failed
+              {pendingTransactions.length} pending · {failedTransactions.length} failed
             </p>
           </div>
         </section>
 
-        {/* ================= PAYMENT RECORDS ================= */}
+        {/* ================= TRANSACTION TABLE ================= */}
         <section className="mt-7 overflow-hidden rounded-2xl border border-[#E9E9EC] bg-white shadow-sm">
 
           {/* Toolbar */}
@@ -387,22 +343,19 @@ export default function TransactionsClient({
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-
               {/* Search */}
               <div className="relative sm:w-[300px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A1A1A8]" />
 
                 <input
                   value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search vendor, email or transaction..."
                   className="h-11 w-full rounded-xl border border-[#E7E7EA] bg-[#FCFCFD] pl-10 pr-4 text-sm text-[#33333A] outline-none transition placeholder:text-[#A4A4AB] focus:border-[#dc2027]/50 focus:ring-2 focus:ring-[#dc2027]/10"
                 />
               </div>
 
-              {/* Status Filter */}
+              {/* Status filter */}
               <select
                 value={statusFilter}
                 onChange={(event) =>
@@ -418,7 +371,7 @@ export default function TransactionsClient({
             </div>
           </div>
 
-          {/* ================= DESKTOP TABLE ================= */}
+          {/* Desktop table */}
           <div className="hidden overflow-x-auto lg:block">
             <table className="w-full">
               <thead>
@@ -450,199 +403,173 @@ export default function TransactionsClient({
               </thead>
 
               <tbody>
-                {filteredTransactions.map(
-                  (transaction) => (
-                    <tr
-                      key={transaction.id}
-                      className="border-t border-[#F0F0F2] transition hover:bg-[#FCFCFD]"
-                    >
-                      {/* Vendor */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDECEE] text-sm font-semibold text-[#dc2027]">
-                            {transaction.vendorName
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-[#303037]">
-                              {transaction.vendorName}
-                            </p>
-
-                            <p className="mt-1 truncate text-xs text-[#96969C]">
-                              {transaction.vendorEmail ||
-                                "No email"}
-                            </p>
-                          </div>
+                {filteredTransactions.map((transaction) => (
+                  <tr
+                    key={transaction.id}
+                    className="border-t border-[#F0F0F2] transition hover:bg-[#FCFCFD]"
+                  >
+                    {/* Vendor */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDECEE] text-sm font-semibold text-[#dc2027]">
+                          {transaction.vendorName
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
-                      </td>
 
-                      {/* Transaction ID */}
-                      <td className="px-5 py-4">
-                        <div className="max-w-[200px]">
-                          <p className="truncate font-mono text-xs text-[#777780]">
-                            {transaction.transactionId ||
-                              "N/A"}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-[#303037]">
+                            {transaction.vendorName}
                           </p>
 
-                          {transaction.sessionId && (
-                            <p className="mt-1 truncate font-mono text-[10px] text-[#B0B0B5]">
-                              {transaction.sessionId}
-                            </p>
-                          )}
+                          <p className="mt-1 truncate text-xs text-[#96969C]">
+                            {transaction.vendorEmail || "No email"}
+                          </p>
                         </div>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Plan */}
-                      <td className="px-5 py-4">
-                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F8F5F2] px-2.5 py-1.5 text-xs font-medium capitalize text-[#76634F]">
-                          <Crown className="h-3.5 w-3.5" />
-                          {transaction.plan}
-                        </span>
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-5 py-4">
-                        <p className="text-sm text-[#686870]">
-                          {formatDate(
-                            transaction.paymentDate
-                          )}
+                    {/* Transaction ID */}
+                    <td className="px-5 py-4">
+                      <div className="max-w-[200px]">
+                        <p className="truncate font-mono text-xs text-[#777780]">
+                          {transaction.transactionId || "N/A"}
                         </p>
 
-                        <p className="mt-1 text-[10px] text-[#A5A5AA]">
-                          {transaction.paymentDate
-                            ? new Date(
-                                transaction.paymentDate
-                              ).toLocaleTimeString(
-                                "en-US",
-                                {
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                }
-                              )
-                            : ""}
-                        </p>
-                      </td>
+                        {transaction.sessionId && (
+                          <p className="mt-1 truncate font-mono text-[10px] text-[#B0B0B5]">
+                            {transaction.sessionId}
+                          </p>
+                        )}
+                      </div>
+                    </td>
 
-                      {/* Amount */}
-                      <td className="px-5 py-4">
-                        <p className="text-sm font-semibold text-[#303037]">
-                          {money(
-                            transaction.amount,
-                            transaction.currency
-                          )}
-                        </p>
-                      </td>
+                    {/* Plan */}
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F8F5F2] px-2.5 py-1.5 text-xs font-medium capitalize text-[#76634F]">
+                        <Crown className="h-3.5 w-3.5" />
+                        {transaction.plan}
+                      </span>
+                    </td>
 
-                      {/* Status */}
-                      <td className="px-6 py-4">
-                        <StatusBadge
-                          status={transaction.status}
-                        />
-                      </td>
-                    </tr>
-                  )
-                )}
+                    {/* Date */}
+                    <td className="px-5 py-4">
+                      <p className="text-sm text-[#686870]">
+                        {formatDate(transaction.paymentDate)}
+                      </p>
+
+                      <p className="mt-1 text-[10px] text-[#A5A5AA]">
+                        {transaction.paymentDate
+                          ? new Date(
+                              transaction.paymentDate
+                            ).toLocaleTimeString("en-US", {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })
+                          : ""}
+                      </p>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-semibold text-[#303037]">
+                        {money(
+                          transaction.amount,
+                          transaction.currency
+                        )}
+                      </p>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-4">
+                      <StatusBadge status={transaction.status} />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
 
+            {/* Empty */}
             {filteredTransactions.length === 0 && (
               <EmptyState />
             )}
           </div>
 
-          {/* ================= MOBILE CARDS ================= */}
+          {/* Mobile/tablet transaction cards */}
           <div className="divide-y divide-[#F0F0F2] lg:hidden">
-            {filteredTransactions.map(
-              (transaction) => (
-                <div
-                  key={transaction.id}
-                  className="p-5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDECEE] text-sm font-semibold text-[#dc2027]">
-                        {transaction.vendorName
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[#303037]">
-                          {transaction.vendorName}
-                        </p>
-
-                        <p className="mt-1 truncate text-xs text-[#96969C]">
-                          {transaction.vendorEmail}
-                        </p>
-                      </div>
+            {filteredTransactions.map((transaction) => (
+              <div key={transaction.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDECEE] text-sm font-semibold text-[#dc2027]">
+                      {transaction.vendorName
+                        .charAt(0)
+                        .toUpperCase()}
                     </div>
 
-                    <p className="shrink-0 text-sm font-semibold text-[#303037]">
-                      {money(
-                        transaction.amount,
-                        transaction.currency
-                      )}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#303037]">
+                        {transaction.vendorName}
+                      </p>
+
+                      <p className="mt-1 truncate text-xs text-[#96969C]">
+                        {transaction.vendorEmail}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <StatusBadge
-                      status={transaction.status}
-                    />
-
-                    <span className="text-xs text-[#929299]">
-                      {formatDate(
-                        transaction.paymentDate
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Transaction ID */}
-                  <div className="mt-3 rounded-xl bg-[#FAFAFB] p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#A1A1A8]">
-                      Transaction ID
-                    </p>
-
-                    <p className="mt-1 break-all font-mono text-xs leading-5 text-[#72727A]">
-                      {transaction.transactionId ||
-                        "Not available"}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-[#777780]">
-                      <Crown className="h-3.5 w-3.5 text-[#B38B54]" />
-
-                      <span className="capitalize">
-                        {transaction.plan} plan
-                      </span>
-                    </span>
-
-                    <span className="truncate text-[11px] text-[#A1A1A8]">
-                      {transaction.sessionId
-                        ? `Session: ${transaction.sessionId.slice(
-                            0,
-                            15
-                          )}...`
-                        : ""}
-                    </span>
-                  </div>
+                  <p className="shrink-0 text-sm font-semibold text-[#303037]">
+                    {money(
+                      transaction.amount,
+                      transaction.currency
+                    )}
+                  </p>
                 </div>
-              )
-            )}
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <StatusBadge status={transaction.status} />
+
+                  <span className="text-xs text-[#929299]">
+                    {formatDate(transaction.paymentDate)}
+                  </span>
+                </div>
+
+                <div className="mt-3 rounded-xl bg-[#FAFAFB] p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#A1A1A8]">
+                    Transaction ID
+                  </p>
+
+                  <p className="mt-1 break-all font-mono text-xs leading-5 text-[#72727A]">
+                    {transaction.transactionId || "Not available"}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-[#777780]">
+                    <Crown className="h-3.5 w-3.5 text-[#B38B54]" />
+                    <span className="capitalize">
+                      {transaction.plan} plan
+                    </span>
+                  </span>
+
+                  <span className="text-[11px] text-[#A1A1A8]">
+                    {transaction.sessionId
+                      ? `Session: ${transaction.sessionId.slice(0, 15)}...`
+                      : ""}
+                  </span>
+                </div>
+              </div>
+            ))}
 
             {filteredTransactions.length === 0 && (
               <EmptyState />
             )}
           </div>
 
-          {/* ================= FOOTER ================= */}
+          {/* Table footer */}
           <div className="flex flex-col justify-between gap-2 border-t border-[#EEEEF0] bg-[#FCFCFD] px-5 py-4 sm:flex-row sm:items-center">
             <p className="text-xs text-[#96969C]">
-              Showing {filteredTransactions.length} of{" "}
-              {actualTransactions.length} transactions
+              Showing {filteredTransactions.length} of {transactions.length} transactions
             </p>
 
             <p className="text-xs text-[#96969C]">
@@ -656,12 +583,29 @@ export default function TransactionsClient({
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#777780]" />
 
           <p className="text-xs leading-5 text-[#85858D]">
-            Transaction data is loaded from your MongoDB
-            payment records. Stripe payment information is
-            securely processed.
+            Transaction data is loaded from your MongoDB payment records.
+            Stripe payment information is securely processed.
           </p>
         </div>
       </div>
     </main>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="px-6 py-16 text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5F5F6] text-[#9999A0]">
+        <Search className="h-6 w-6" />
+      </div>
+
+      <h3 className="mt-4 text-sm font-semibold text-[#303037]">
+        No transactions found
+      </h3>
+
+      <p className="mt-2 text-xs text-[#96969C]">
+        Try changing your search or status filter.
+      </p>
+    </div>
   );
 }

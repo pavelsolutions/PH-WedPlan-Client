@@ -1,7 +1,7 @@
 
 import { CreateServicePayload } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 // export const createService = async (data : CreateServicePayload) => {
 //     const res = await fetch(`${BASE_URL}/services`, {

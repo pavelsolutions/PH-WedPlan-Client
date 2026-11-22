@@ -24,7 +24,7 @@ export default function FinalCTASection() {
           </div>
 
           <h2 className="mt-5 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-            Let's Make Your
+            Lets Make Your
             <span className="block text-[#f45b4f]">
               Dream Wedding Happen
             </span>
@@ -38,7 +38,6 @@ export default function FinalCTASection() {
 
           <div className="mt-9 flex justify-center">
             <Button
-              asChild
               size="lg"
               className="h-12 min-w-[210px] rounded-full bg-[#f45b4f] px-7 text-white hover:bg-[#df493e]"
             >

@@ -1,8 +1,8 @@
 
-import { betterAuth } from "better-auth";
+import { betterAuth} from "better-auth";
 import { MongoClient } from "mongodb";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
-
+import { jwt } from "better-auth/plugins";
 const client = new MongoClient(process.env.DATABASE_URL!);
 
 const db = client.db("phWedPlanDB");
@@ -11,7 +11,6 @@ export const auth = betterAuth({
   database: mongodbAdapter(db, {
     client,
   }),
-
   emailAndPassword: {
     enabled: true,
   },
@@ -22,7 +21,6 @@ export const auth = betterAuth({
       clientSecret: process.env.BETTER_AUTH_GOOGLE_CLIENT_SECRET!,
     },
   },
-
   user: {
     additionalFields: {
       role: {
@@ -80,4 +78,12 @@ export const auth = betterAuth({
       },
     },
   },
+  plugins: [jwt()],
+  session: {
+    cookieCache: {
+      enabled: true,
+      strategy: "jwt",
+      maxAge: 7 * 24 * 60 * 60   // 7 days
+    }
+  }
 });
