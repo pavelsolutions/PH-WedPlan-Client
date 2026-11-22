@@ -30,6 +30,7 @@ export const getAllServices = async () => {
       : [];
 };
 
+
 export const getAllServicesData = async (params?: {
   search?: string;
   category?: string;
@@ -43,62 +44,57 @@ export const getAllServicesData = async (params?: {
 }) => {
   const query = new URLSearchParams();
 
-  // Keyword search
   if (params?.search?.trim()) {
     query.set("search", params.search.trim());
   }
 
-  // Category filter
   if (params?.category && params.category !== "all") {
     query.set("category", params.category);
   }
 
-  // Location filter
   if (params?.location?.trim()) {
     query.set("location", params.location.trim());
   }
 
-  // Sorting
-  if (params?.sort) {
-    query.set("sort", params.sort);
-  }
+  query.set("sort", params?.sort || "newest");
 
-  // Minimum budget
   if (params?.minBudget) {
     query.set("minBudget", params.minBudget);
   }
 
-  // Maximum budget
   if (params?.maxBudget) {
     query.set("maxBudget", params.maxBudget);
   }
 
-  // Rating filter
   if (params?.rating && params.rating !== "all") {
     query.set("rating", params.rating);
   }
 
-  // Verified vendors
   if (params?.verified) {
     query.set("verified", "true");
   }
 
-  // Featured services
   if (params?.featured) {
     query.set("featured", "true");
   }
 
-  const url = `${BASE_URL}/services?${query.toString()}`;
+  const res = await fetch(
+    `${BASE_URL}/services/all?${query.toString()}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
 
-  const res = await fetch(url, {
-    cache: "no-store",
-  });
+  const data = await res.json();
 
   if (!res.ok) {
-    throw new Error("Failed to fetch services");
+    throw new Error(
+      data.message || "Failed to fetch services"
+    );
   }
 
-  return res.json();
+  return data;
 };
 
 

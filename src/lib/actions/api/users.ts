@@ -1,4 +1,4 @@
-import { IProfile } from "@/types";
+import { IProfile, IUpdateProfileResponse } from "@/types";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL
@@ -20,6 +20,8 @@ export const getProfile = async (
   return result.data;
 };
 
+
+
 export const updateProfile = async (
   userId: string,
   data: {
@@ -30,8 +32,7 @@ export const updateProfile = async (
     bio: string;
     image?: string;
   }
-): Promise<IProfile> => {
-
+) => {
   const res = await fetch(
     `${BASE_URL}/users/${encodeURIComponent(userId)}`,
     {
@@ -46,12 +47,13 @@ export const updateProfile = async (
   const result = await res.json();
 
   if (!res.ok || !result.success) {
-    throw new Error(result.message || "Failed to update profile");
+    throw new Error(
+      result.message || "Failed to update profile"
+    );
   }
 
   return result.data;
 };
-
 
 
 // Get All Registered Users

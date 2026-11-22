@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/avatar";
 
 import { cn } from "@/lib/utils";
+import { DashboardUserProvider, useDashboardUser } from "@/app/context/dashboard-user-context";
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -50,13 +51,16 @@ interface DashboardShellProps {
   };
 }
 
-export default function DashboardShell({
+function DashboardShellContent({
   children,
   role,
-  user,
-}: DashboardShellProps) {
+}: {
+  children: ReactNode;
+  role: DashboardRole;
+}) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useDashboardUser();
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -420,5 +424,19 @@ export default function DashboardShell({
       </footer>
 
     </div>
+  );
+}
+
+export default function DashboardShell({
+  children,
+  role,
+  user,
+}: DashboardShellProps) {
+  return (
+    <DashboardUserProvider initialUser={user}>
+      <DashboardShellContent role={role}>
+        {children}
+      </DashboardShellContent>
+    </DashboardUserProvider>
   );
 }

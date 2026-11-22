@@ -1,7 +1,9 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
 import {
   Search,
   MapPin,
@@ -14,11 +16,11 @@ import {
   ArrowUpDown,
   Heart,
   CheckCircle2,
-  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -26,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +37,7 @@ import { IService } from "@/types";
 import { getAllServicesData } from "@/lib/actions/api/services";
 import ServiceCard from "@/components/shared/ServiceCard";
 
+// Categories
 const categories = [
   "Photography & Videography",
   "Wedding Venues",
@@ -44,70 +48,119 @@ const categories = [
 ];
 
 export default function ServicesPage() {
-
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Services
+  // =====================================
+  // SERVICES STATES
+  // =====================================
+
   const [services, setServices] = useState<IService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
 
-  // URL based filters
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // =====================================
+  // FILTER STATES
+  // =====================================
+
+  const [search, setSearch] = useState(
+    searchParams.get("search") ?? ""
+  );
+
   const [category, setCategory] = useState(
     searchParams.get("category") ?? "all"
   );
+
   const [location, setLocation] = useState(
     searchParams.get("location") ?? ""
   );
+
   const [sort, setSort] = useState(
     searchParams.get("sort") ?? "newest"
   );
 
   // Advanced filters
+
   const [showAdvanced, setShowAdvanced] = useState(false);
+
   const [minBudget, setMinBudget] = useState(
     searchParams.get("minBudget") ?? ""
   );
+
   const [maxBudget, setMaxBudget] = useState(
     searchParams.get("maxBudget") ?? ""
   );
+
   const [rating, setRating] = useState(
     searchParams.get("rating") ?? "all"
   );
+
   const [verified, setVerified] = useState(
     searchParams.get("verified") === "true"
   );
+
   const [featured, setFeatured] = useState(
     searchParams.get("featured") === "true"
   );
 
-  const [refreshKey, setRefreshKey] = useState(0);
+  // =====================================
+  // URL SYNCHRONIZATION
+  // =====================================
 
-  // -----------------------------
-  // Sync filters with URL
-  // -----------------------------
   useEffect(() => {
     const params = new URLSearchParams();
 
-    if (search.trim()) params.set("search", search.trim());
-    if (category !== "all") params.set("category", category);
-    if (location.trim()) params.set("location", location.trim());
-    if (sort !== "newest") params.set("sort", sort);
-    if (minBudget) params.set("minBudget", minBudget);
-    if (maxBudget) params.set("maxBudget", maxBudget);
-    if (rating !== "all") params.set("rating", rating);
-    if (verified) params.set("verified", "true");
-    if (featured) params.set("featured", "true");
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+
+    if (category !== "all") {
+      params.set("category", category);
+    }
+
+    if (location.trim()) {
+      params.set("location", location.trim());
+    }
+
+    if (sort !== "newest") {
+      params.set("sort", sort);
+    }
+
+    if (minBudget) {
+      params.set("minBudget", minBudget);
+    }
+
+    if (maxBudget) {
+      params.set("maxBudget", maxBudget);
+    }
+
+    if (rating !== "all") {
+      params.set("rating", rating);
+    }
+
+    if (verified) {
+      params.set("verified", "true");
+    }
+
+    if (featured) {
+      params.set("featured", "true");
+    }
 
     const query = params.toString();
+
     const newUrl = query
       ? `${window.location.pathname}?${query}`
       : window.location.pathname;
 
-    router.replace(newUrl, { scroll: false });
+    const currentUrl =
+      window.location.pathname + window.location.search;
+
+    if (currentUrl !== newUrl) {
+      router.replace(newUrl, { scroll: false });
+    }
   }, [
     search,
     category,
@@ -121,20 +174,25 @@ export default function ServicesPage() {
     router,
   ]);
 
-  // -----------------------------
-  // Browser Back / Forward support
-  // -----------------------------
+  // =====================================
+  // BROWSER BACK / FORWARD SUPPORT
+  // =====================================
+
   useEffect(() => {
     const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(
+        window.location.search
+      );
 
       setSearch(params.get("search") ?? "");
       setCategory(params.get("category") ?? "all");
       setLocation(params.get("location") ?? "");
       setSort(params.get("sort") ?? "newest");
+
       setMinBudget(params.get("minBudget") ?? "");
       setMaxBudget(params.get("maxBudget") ?? "");
       setRating(params.get("rating") ?? "all");
+
       setVerified(params.get("verified") === "true");
       setFeatured(params.get("featured") === "true");
     };
@@ -146,9 +204,10 @@ export default function ServicesPage() {
     };
   }, []);
 
-  // -----------------------------
-  // Fetch services
-  // -----------------------------
+  // =====================================
+  // FETCH SERVICES
+  // =====================================
+
   useEffect(() => {
     let active = true;
 
@@ -171,17 +230,22 @@ export default function ServicesPage() {
 
         if (!active) return;
 
-        const serviceList = Array.isArray(result)
+        const serviceList: IService[] = Array.isArray(result)
           ? result
-          : result?.services ?? result?.data ?? [];
+          : Array.isArray(result?.services)
+            ? result.services
+            : Array.isArray(result?.data)
+              ? result.data
+              : [];
 
         setServices(serviceList);
 
         setTotal(
           Array.isArray(result)
             ? serviceList.length
-            : result?.total ?? serviceList.length
+            : Number(result?.total ?? serviceList.length)
         );
+
       } catch (err) {
         if (!active) return;
 
@@ -193,8 +257,11 @@ export default function ServicesPage() {
 
         setServices([]);
         setTotal(0);
+
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
@@ -204,6 +271,7 @@ export default function ServicesPage() {
       active = false;
       clearTimeout(timer);
     };
+
   }, [
     search,
     category,
@@ -217,36 +285,53 @@ export default function ServicesPage() {
     refreshKey,
   ]);
 
-  // -----------------------------
-  // Clear all filters
-  // -----------------------------
+  // =====================================
+  // CLEAR ALL FILTERS
+  // =====================================
+
   const clearFilters = () => {
     setSearch("");
     setCategory("all");
     setLocation("");
     setSort("newest");
+
     setMinBudget("");
     setMaxBudget("");
     setRating("all");
+
     setVerified(false);
     setFeatured(false);
+
     setRefreshKey((prev) => prev + 1);
   };
 
-  // -----------------------------
-  // Reset advanced filters
-  // -----------------------------
+  // =====================================
+  // CLEAR ADVANCED FILTERS
+  // =====================================
+
   const clearAdvanced = () => {
     setMinBudget("");
     setMaxBudget("");
     setRating("all");
+
     setVerified(false);
     setFeatured(false);
+
+    setRefreshKey((prev) => prev + 1);
   };
 
-  // -----------------------------
-  // Remove individual filter
-  // -----------------------------
+  // =====================================
+  // APPLY FILTERS
+  // =====================================
+
+  const applyFilters = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  // =====================================
+  // REMOVE INDIVIDUAL FILTER
+  // =====================================
+
   const removeFilter = (key: string) => {
     switch (key) {
       case "search":
@@ -283,9 +368,10 @@ export default function ServicesPage() {
     }
   };
 
-  // -----------------------------
-  // Active filter count
-  // -----------------------------
+  // =====================================
+  // ACTIVE FILTER COUNT
+  // =====================================
+
   const activeFilters = [
     search.trim(),
     category !== "all" ? category : "",
@@ -297,9 +383,10 @@ export default function ServicesPage() {
     featured ? "featured" : "",
   ].filter(Boolean).length;
 
-  // -----------------------------
-  // Filter chips
-  // -----------------------------
+  // =====================================
+  // FILTER CHIPS
+  // =====================================
+
   const filterChips = [
     search.trim()
       ? { key: "search", label: `Search: ${search}` }
@@ -332,15 +419,24 @@ export default function ServicesPage() {
     featured
       ? { key: "featured", label: "Featured" }
       : null,
-  ].filter(Boolean) as { key: string; label: string }[];
+
+  ].filter(Boolean) as {
+    key: string;
+    label: string;
+  }[];
+
+  // =====================================
+  // UI
+  // =====================================
 
   return (
     <main className="min-h-screen bg-[#FCF9F7]">
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
 
         {/* HEADER */}
+
         <header className="mb-8">
-          <Badge className="mb-4 rounded-full border border-[#F1DDE1] bg-[#F8E9ED] px-3 py-1.5 text-xs font-medium text-[#92283D] hover:bg-[#F8E9ED]">
+          <Badge className="mb-4 rounded-full border border-[#F1DDE1] bg-[#F8E9ED] px-3 py-1.5 text-xs font-medium text-[#dc2027] hover:bg-[#F8E9ED]">
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
             Curated Wedding Marketplace
           </Badge>
@@ -349,7 +445,7 @@ export default function ServicesPage() {
             <div>
               <h1 className="font-serif text-3xl font-bold tracking-tight text-[#281C17] sm:text-4xl">
                 Find Your Perfect{" "}
-                <span className="text-[#92283D]">
+                <span className="text-[#dc2027]">
                   Wedding Service
                 </span>
               </h1>
@@ -362,9 +458,10 @@ export default function ServicesPage() {
             </div>
 
             <div className="flex items-center gap-2 text-sm text-[#806D68]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F8E9ED] text-[#92283D]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F8E9ED] text-[#dc2027]">
                 <Heart className="h-4 w-4" />
               </div>
+
               <span>
                 Make your dream wedding come to life
               </span>
@@ -373,11 +470,14 @@ export default function ServicesPage() {
         </header>
 
         {/* SEARCH CARD */}
+
         <Card className="mb-8 overflow-hidden rounded-2xl border-[#EADFD8] bg-white shadow-[0_8px_30px_rgba(40,28,23,0.04)]">
           <div className="p-4 sm:p-5">
+
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr_1fr_auto]">
 
               {/* SEARCH INPUT */}
+
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#967F79]" />
 
@@ -385,14 +485,14 @@ export default function ServicesPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search services, vendors, keywords..."
-                  className="h-12 rounded-xl border-[#E7DAD2] bg-[#FFFCFB] pl-10 text-sm focus-visible:ring-[#92283D]"
+                  className="h-12 rounded-xl border-[#E7DAD2] bg-[#FFFCFB] pl-10 text-sm focus-visible:ring-[#dc2027]"
                 />
 
                 {search && (
                   <button
                     type="button"
                     onClick={() => setSearch("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#967F79] hover:text-[#92283D]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#967F79] hover:text-[#dc2027]"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -400,9 +500,12 @@ export default function ServicesPage() {
               </div>
 
               {/* CATEGORY */}
+
               <Select
                 value={category}
-                onValueChange={(value) => setCategory(value ?? "all")}
+                onValueChange={(value) =>
+                  setCategory(value ?? "all")
+                }
               >
                 <SelectTrigger className="h-12 rounded-xl border-[#E7DAD2] bg-[#FFFCFB] text-sm">
                   <SelectValue placeholder="All Categories" />
@@ -422,6 +525,7 @@ export default function ServicesPage() {
               </Select>
 
               {/* LOCATION */}
+
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#967F79]" />
 
@@ -429,13 +533,14 @@ export default function ServicesPage() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="City or location..."
-                  className="h-12 rounded-xl border-[#E7DAD2] bg-[#FFFCFB] pl-10 text-sm focus-visible:ring-[#92283D]"
+                  className="h-12 rounded-xl border-[#E7DAD2] bg-[#FFFCFB] pl-10 text-sm focus-visible:ring-[#dc2027]"
                 />
               </div>
 
               {/* SEARCH BUTTON */}
+
               <Button
-                onClick={() => setRefreshKey((prev) => prev + 1)}
+                onClick={applyFilters}
                 className="h-12 rounded-xl bg-[#dc2027] px-6 text-sm font-semibold text-white hover:bg-[#7D2033]"
               >
                 <Search className="mr-2 h-4 w-4" />
@@ -444,17 +549,20 @@ export default function ServicesPage() {
             </div>
 
             {/* ADVANCED TOGGLE */}
+
             <div className="mt-4 flex flex-col justify-between gap-3 border-t border-[#F1E8E2] pt-4 sm:flex-row sm:items-center">
+
               <Button
                 variant="ghost"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="h-auto w-fit rounded-lg px-2 py-2 text-sm font-medium text-[#92283D] hover:bg-[#F8E9ED] hover:text-[#7D2033]"
+                className="h-auto w-fit rounded-lg px-2 py-2 text-sm font-medium text-[#dc2027] hover:bg-[#F8E9ED] hover:text-[#7D2033]"
               >
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
+
                 Advanced Filters
 
                 {activeFilters > 0 && (
-                  <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#92283D] px-1.5 text-[10px] text-white">
+                  <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#dc2027] px-1.5 text-[10px] text-white">
                     {activeFilters}
                   </span>
                 )}
@@ -474,8 +582,10 @@ export default function ServicesPage() {
           </div>
 
           {/* ADVANCED FILTER PANEL */}
+
           {showAdvanced && (
             <div className="border-t border-[#F1E8E2] bg-[#FFFCFB] p-4 sm:p-5">
+
               <div className="mb-5">
                 <h3 className="font-serif text-xl font-semibold text-[#281C17]">
                   Refine Your Search
@@ -487,7 +597,9 @@ export default function ServicesPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
                 {/* MIN BUDGET */}
+
                 <div>
                   <label className="mb-2 block text-sm font-medium text-[#59453E]">
                     Minimum Budget
@@ -504,6 +616,7 @@ export default function ServicesPage() {
                 </div>
 
                 {/* MAX BUDGET */}
+
                 <div>
                   <label className="mb-2 block text-sm font-medium text-[#59453E]">
                     Maximum Budget
@@ -520,6 +633,7 @@ export default function ServicesPage() {
                 </div>
 
                 {/* RATING */}
+
                 <div>
                   <label className="mb-2 block text-sm font-medium text-[#59453E]">
                     Minimum Rating
@@ -527,7 +641,9 @@ export default function ServicesPage() {
 
                   <Select
                     value={rating}
-                     onValueChange={(value) => setRating(value ?? "all")}
+                    onValueChange={(value) =>
+                      setRating(value ?? "all")
+                    }
                   >
                     <SelectTrigger className="h-11 rounded-xl border-[#E7DAD2] bg-white">
                       <SelectValue placeholder="Any Rating" />
@@ -537,15 +653,19 @@ export default function ServicesPage() {
                       <SelectItem value="all">
                         Any Rating
                       </SelectItem>
+
                       <SelectItem value="3">
                         3+ Stars
                       </SelectItem>
+
                       <SelectItem value="4">
                         4+ Stars
                       </SelectItem>
+
                       <SelectItem value="4.5">
                         4.5+ Stars
                       </SelectItem>
+
                       <SelectItem value="5">
                         5 Stars
                       </SelectItem>
@@ -555,46 +675,60 @@ export default function ServicesPage() {
               </div>
 
               {/* VERIFIED / FEATURED */}
+
               <div className="mt-5 flex flex-wrap gap-3">
+
+                {/* VERIFIED */}
+
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-4 py-3 text-sm transition ${
                     verified
-                      ? "border-[#92283D] bg-[#F8E9ED] text-[#92283D]"
+                      ? "border-[#dc2027] bg-[#F8E9ED] text-[#dc2027]"
                       : "border-[#E7DAD2] bg-white text-[#59453E] hover:bg-[#FCF9F7]"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={verified}
-                    onChange={(e) => setVerified(e.target.checked)}
-                    className="accent-[#92283D]"
+                    onChange={(e) =>
+                      setVerified(e.target.checked)
+                    }
+                    className="accent-[#dc2027]"
                   />
 
                   <CheckCircle2 className="h-4 w-4" />
+
                   Verified Vendors
                 </label>
+
+                {/* FEATURED */}
 
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-4 py-3 text-sm transition ${
                     featured
-                      ? "border-[#92283D] bg-[#F8E9ED] text-[#92283D]"
+                      ? "border-[#dc2027] bg-[#F8E9ED] text-[#dc2027]"
                       : "border-[#E7DAD2] bg-white text-[#59453E] hover:bg-[#FCF9F7]"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={featured}
-                    onChange={(e) => setFeatured(e.target.checked)}
-                    className="accent-[#92283D]"
+                    onChange={(e) =>
+                      setFeatured(e.target.checked)
+                    }
+                    className="accent-[#dc2027]"
                   />
 
                   <Sparkles className="h-4 w-4" />
+
                   Featured Partners
                 </label>
               </div>
 
               {/* ADVANCED ACTIONS */}
+
               <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-[#F1E8E2] pt-4">
+
                 <Button
                   variant="outline"
                   onClick={clearAdvanced}
@@ -605,8 +739,8 @@ export default function ServicesPage() {
                 </Button>
 
                 <Button
-                  onClick={() => setRefreshKey((prev) => prev + 1)}
-                  className="h-10 rounded-xl bg-[#92283D] px-5 text-sm text-white hover:bg-[#7D2033]"
+                  onClick={applyFilters}
+                  className="h-10 rounded-xl bg-[#dc2027] px-5 text-sm text-white hover:bg-[#7D2033]"
                 >
                   Apply Filters
                 </Button>
@@ -616,8 +750,10 @@ export default function ServicesPage() {
         </Card>
 
         {/* ACTIVE FILTER CHIPS */}
+
         {filterChips.length > 0 && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
+
             <span className="mr-1 text-xs font-medium text-[#806D68]">
               Active filters:
             </span>
@@ -625,7 +761,7 @@ export default function ServicesPage() {
             {filterChips.map((chip) => (
               <Badge
                 key={chip.key}
-                className="flex items-center gap-1.5 rounded-full border border-[#E8C9CF] bg-[#F8E9ED] px-3 py-1.5 text-xs font-medium text-[#92283D] hover:bg-[#F8E9ED]"
+                className="flex items-center gap-1.5 rounded-full border border-[#E8C9CF] bg-[#F8E9ED] px-3 py-1.5 text-xs font-medium text-[#dc2027] hover:bg-[#F8E9ED]"
               >
                 {chip.label}
 
@@ -643,7 +779,7 @@ export default function ServicesPage() {
             <button
               type="button"
               onClick={clearFilters}
-              className="ml-1 text-xs font-medium text-[#92283D] underline underline-offset-2 hover:text-[#7D2033]"
+              className="ml-1 text-xs font-medium text-[#dc2027] underline underline-offset-2 hover:text-[#7D2033]"
             >
               Clear all
             </button>
@@ -651,7 +787,9 @@ export default function ServicesPage() {
         )}
 
         {/* RESULTS HEADER */}
+
         <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+
           <div>
             <h2 className="text-lg font-semibold text-[#281C17]">
               Explore Services
@@ -672,14 +810,21 @@ export default function ServicesPage() {
           </div>
 
           {/* SORT */}
+
           <div className="flex items-center gap-2">
+
             <ArrowUpDown className="h-4 w-4 text-[#967F79]" />
 
             <span className="text-xs text-[#806D68]">
               Sort by
             </span>
 
-            <Select value={sort} onValueChange={(value) => setSort(value ?? "default")}>
+            <Select
+              value={sort}
+              onValueChange={(value) =>
+                setSort(value ?? "newest")
+              }
+            >
               <SelectTrigger className="h-10 w-[190px] rounded-xl border-[#E7DAD2] bg-white text-sm">
                 <SelectValue placeholder="Sort services" />
               </SelectTrigger>
@@ -688,15 +833,19 @@ export default function ServicesPage() {
                 <SelectItem value="newest">
                   Featured & Newest
                 </SelectItem>
+
                 <SelectItem value="price-low">
                   Price: Low to High
                 </SelectItem>
+
                 <SelectItem value="price-high">
                   Price: High to Low
                 </SelectItem>
+
                 <SelectItem value="rating">
                   Highest Rated
                 </SelectItem>
+
                 <SelectItem value="featured">
                   Featured First
                 </SelectItem>
@@ -706,8 +855,10 @@ export default function ServicesPage() {
         </div>
 
         {/* LOADING STATE */}
+
         {loading && (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <Card
                 key={item}
@@ -726,9 +877,11 @@ export default function ServicesPage() {
           </div>
         )}
 
-        {/* ERROR */}
+        {/* ERROR STATE */}
+
         {!loading && error && (
           <Card className="rounded-2xl border-red-200 bg-red-50 p-8 text-center">
+
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
               <X className="h-5 w-5 text-red-600" />
             </div>
@@ -742,7 +895,9 @@ export default function ServicesPage() {
             </p>
 
             <Button
-              onClick={() => setRefreshKey((prev) => prev + 1)}
+              onClick={() =>
+                setRefreshKey((prev) => prev + 1)
+              }
               variant="outline"
               className="mt-5 rounded-xl border-red-200"
             >
@@ -752,8 +907,10 @@ export default function ServicesPage() {
         )}
 
         {/* SERVICE GRID */}
+
         {!loading && !error && services.length > 0 && (
           <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
             {services.map((service) => (
               <ServiceCard
                 key={service._id}
@@ -764,10 +921,12 @@ export default function ServicesPage() {
         )}
 
         {/* EMPTY STATE */}
+
         {!loading && !error && services.length === 0 && (
           <Card className="rounded-2xl border border-dashed border-[#E8C9CF] bg-white px-5 py-16 text-center shadow-sm">
+
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F8E9ED]">
-              <Search className="h-7 w-7 text-[#92283D]" />
+              <Search className="h-7 w-7 text-[#dc2027]" />
             </div>
 
             <h3 className="font-serif text-2xl font-bold text-[#281C17]">
@@ -789,6 +948,7 @@ export default function ServicesPage() {
             </Button>
           </Card>
         )}
+
       </div>
     </main>
   );

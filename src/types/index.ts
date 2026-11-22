@@ -74,3 +74,10 @@ export interface Transaction {
   createdAt: Date;
   updatedAt: Date;
 }
+
+
+export interface IUpdateProfileResponse {
+    success: boolean;
+    message: string;
+    data: IProfile;
+}
