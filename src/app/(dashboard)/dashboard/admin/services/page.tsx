@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import {
   Search,
   CheckCircle2,
@@ -10,7 +11,12 @@ import {
   RefreshCw,
   BriefcaseBusiness,
   Clock,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  PackageSearch,
 } from "lucide-react";
+
 import { toast } from "sonner";
 
 import {
@@ -19,6 +25,46 @@ import {
   updateAdminServices,
 } from "@/lib/actions/api/services";
 
+// Shadcn UI
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+// Types
 type Service = {
   _id: string;
   title?: string;
@@ -32,19 +78,75 @@ type Service = {
   createdAt?: string | number | Date;
 };
 
+type ServiceStatus = "APPROVED" | "REJECTED";
+
+const ITEMS_PER_PAGE = 10;
+
+// Normalize Status
 const normalizeStatus = (status?: string) =>
-  (status || "pending").toUpperCase();
+  (status?.trim() || "pending")
+    .toLowerCase()
+    .replace(/^\w/, (char) => char.toUpperCase());
+
+const getStatusValue = (status?: string) =>
+  (status?.trim() || "pending").toUpperCase();
+
+// Get Service Name
+const getServiceName = (service: Service) =>
+  service.title ||
+  service.serviceName ||
+  service.name ||
+  "Untitled Service";
+
+// Status Style
+const getStatusClass = (status?: string) => {
+  switch (getStatusValue(status)) {
+    case "APPROVED":
+      return "border-green-200 bg-green-50 text-green-700";
+
+    case "REJECTED":
+      return "border-red-200 bg-red-50 text-red-700";
+
+    default:
+      return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+};
+
+// Format Date
+const formatDate = (date?: string | number | Date) => {
+  if (!date) return "N/A";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "N/A";
+  }
+
+  return parsedDate.toLocaleDateString("en-BD", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 export default function ManageServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
+
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("ALL");
+
+  // Lowercase values for filtering
+  const [filter, setFilter] = useState("all");
+
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
   const [deleteModal, setDeleteModal] = useState(false);
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
-    null
-  );
+
+  const [selectedService, setSelectedService] =
+    useState<Service | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch Services
   const fetchServices = useCallback(async (showLoader = true) => {
@@ -54,9 +156,11 @@ export default function ManageServicesPage() {
       }
 
       const data = await getAdminServices();
-      setServices(data as Service[]);
+
+      setServices(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch services:", error);
+
       toast.error("Failed to load services");
     } finally {
       setLoading(false);
@@ -64,13 +168,13 @@ export default function ManageServicesPage() {
   }, []);
 
   useEffect(() => {
-    void fetchServices(false);
+    void fetchServices();
   }, [fetchServices]);
 
   // Update Service Status
   const updateStatus = async (
     id: string,
-    status: "APPROVED" | "REJECTED"
+    status: ServiceStatus
   ) => {
     try {
       setUpdatingId(id);
@@ -86,10 +190,11 @@ export default function ManageServicesPage() {
       );
 
       toast.success(
-        `Service ${status.toLowerCase()} successfully`
+        `Service ${normalizeStatus(status)} successfully`
       );
     } catch (error) {
       console.error("Failed to update service:", error);
+
       toast.error("Failed to update service status");
     } finally {
       setUpdatingId(null);
@@ -98,41 +203,60 @@ export default function ManageServicesPage() {
 
   // Delete Service
   const handleDeleteService = async () => {
-    if (!selectedServiceId) return;
+    if (!selectedService) return;
+
+    const id = selectedService._id;
 
     try {
-      setUpdatingId(selectedServiceId);
+      setUpdatingId(id);
 
-      await deleteAdminService(selectedServiceId);
+      await deleteAdminService(id);
 
       setServices((prev) =>
-        prev.filter(
-          (service) => service._id !== selectedServiceId
-        )
+        prev.filter((service) => service._id !== id)
       );
 
       toast.success("Service deleted successfully");
 
       setDeleteModal(false);
-      setSelectedServiceId(null);
+      setSelectedService(null);
     } catch (error) {
       console.error("Failed to delete service:", error);
+
       toast.error("Failed to delete service");
     } finally {
       setUpdatingId(null);
     }
   };
 
+  // Statistics
+  const stats = useMemo(() => {
+    return {
+      total: services.length,
+
+      pending: services.filter(
+        (service) =>
+          getStatusValue(service.status) === "PENDING"
+      ).length,
+
+      approved: services.filter(
+        (service) =>
+          getStatusValue(service.status) === "APPROVED"
+      ).length,
+
+      rejected: services.filter(
+        (service) =>
+          getStatusValue(service.status) === "REJECTED"
+      ).length,
+    };
+  }, [services]);
+
   // Search and Filter
   const filteredServices = useMemo(() => {
-    const searchTerm = search.toLowerCase();
+    const searchTerm = search.trim().toLowerCase();
 
     return services.filter((service) => {
-      const serviceName =
-        service.title ||
-        service.serviceName ||
-        service.name ||
-        "";
+      const serviceName = getServiceName(service);
 
       const matchesSearch =
         serviceName.toLowerCase().includes(searchTerm) ||
@@ -147,46 +271,70 @@ export default function ManageServicesPage() {
           .includes(searchTerm);
 
       const matchesFilter =
-        filter === "ALL" ||
-        normalizeStatus(service.status) === filter;
+        filter === "all" ||
+        getStatusValue(service.status).toLowerCase() === filter;
 
       return matchesSearch && matchesFilter;
     });
   }, [services, search, filter]);
 
-  // Statistics
-  const stats = {
-    total: services.length,
+  // Pagination
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredServices.length / ITEMS_PER_PAGE)
+  );
 
-    pending: services.filter(
-      (service) =>
-        normalizeStatus(service.status) === "PENDING"
-    ).length,
+  const paginatedServices = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 
-    approved: services.filter(
-      (service) =>
-        normalizeStatus(service.status) === "APPROVED"
-    ).length,
+    return filteredServices.slice(
+      startIndex,
+      startIndex + ITEMS_PER_PAGE
+    );
+  }, [filteredServices, currentPage]);
 
-    rejected: services.filter(
-      (service) =>
-        normalizeStatus(service.status) === "REJECTED"
-    ).length,
-  };
+  // Reset Pagination
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter]);
 
-  // Status Styles
-  const getStatusStyle = (status?: string) => {
-    switch (normalizeStatus(status)) {
-      case "APPROVED":
-        return "bg-green-50 text-green-700";
-
-      case "REJECTED":
-        return "bg-red-50 text-red-600";
-
-      default:
-        return "bg-amber-50 text-amber-700";
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
-  };
+  }, [currentPage, totalPages]);
+
+  // Statistics Cards
+  const statsCards = [
+    {
+      label: "Total Services",
+      value: stats.total,
+      icon: BriefcaseBusiness,
+      color: "text-[#f45b4f]",
+      bg: "bg-[#fff0eb]",
+    },
+    {
+      label: "Pending",
+      value: stats.pending,
+      icon: Clock,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      label: "Approved",
+      value: stats.approved,
+      icon: CheckCircle2,
+      color: "text-green-600",
+      bg: "bg-green-50",
+    },
+    {
+      label: "Rejected",
+      value: stats.rejected,
+      icon: XCircle,
+      color: "text-red-600",
+      bg: "bg-red-50",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#fffaf7] p-4 sm:p-6 lg:p-8">
@@ -199,68 +347,39 @@ export default function ManageServicesPage() {
               Admin Dashboard
             </p>
 
-            <h1 className="mt-1 text-2xl font-bold text-[#302521] sm:text-3xl">
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#302521] sm:text-3xl">
               Manage Services
             </h1>
 
-            <p className="mt-2 text-sm text-gray-500">
-              Manage and review all vendor services.
+            <p className="mt-2 text-sm text-muted-foreground">
+              Manage, review and monitor all vendor services.
             </p>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => void fetchServices(true)}
             disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-xl border border-[#f1e5df] bg-white px-4 py-2.5 text-sm font-semibold text-[#302521] transition hover:bg-[#fff1ed] disabled:opacity-50"
+            className="gap-2 border-[#f1e5df] bg-white"
           >
             <RefreshCw
               size={16}
               className={loading ? "animate-spin" : ""}
             />
             Refresh
-          </button>
+          </Button>
         </div>
 
         {/* Statistics */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[
-            {
-              label: "Total Services",
-              value: stats.total,
-              icon: BriefcaseBusiness,
-              color: "text-[#f45b4f]",
-              bg: "bg-[#fff0eb]",
-            },
-            {
-              label: "Pending",
-              value: stats.pending,
-              icon: Clock,
-              color: "text-amber-600",
-              bg: "bg-amber-50",
-            },
-            {
-              label: "Approved",
-              value: stats.approved,
-              icon: CheckCircle2,
-              color: "text-green-600",
-              bg: "bg-green-50",
-            },
-            {
-              label: "Rejected",
-              value: stats.rejected,
-              icon: XCircle,
-              color: "text-red-600",
-              bg: "bg-red-50",
-            },
-          ].map((item) => (
-            <div
+          {statsCards.map((item) => (
+            <Card
               key={item.label}
-              className="rounded-2xl border border-[#f1e5df] bg-white p-5 shadow-sm"
+              className="rounded-2xl border-[#f1e5df] shadow-sm"
             >
-              <div className="flex items-center justify-between">
+              <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {item.label}
                   </p>
 
@@ -270,258 +389,443 @@ export default function ManageServicesPage() {
                 </div>
 
                 <div className={`rounded-xl p-3 ${item.bg}`}>
-                  <item.icon className={item.color} size={22} />
+                  <item.icon
+                    className={item.color}
+                    size={22}
+                  />
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Search and Filter */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-[#f1e5df] bg-white p-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+        <Card className="rounded-2xl border-[#f1e5df] shadow-sm">
+          <CardContent className="grid grid-cols-1 items-center gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_190px]">
 
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search service, vendor or category..."
-              className="w-full rounded-xl border border-[#eee4df] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#f45b4f]"
-            />
-          </div>
+            {/* Search */}
+            <div className="relative w-full">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
 
-          <select
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            className="rounded-xl border border-[#eee4df] bg-white px-4 py-3 text-sm outline-none focus:border-[#f45b4f]"
-          >
-            <option value="ALL">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
-        </div>
+              <Input
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Search service, vendor or category..."
+                className="h-11 w-full border-[#eee4df] pl-10 focus-visible:ring-[#f45b4f]"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <Select
+              value={filter}
+              onValueChange={setFilter}
+            >
+              <SelectTrigger className="h-11 w-full border-[#eee4df]">
+                <div className="flex items-center gap-2">
+                  <Filter size={16} />
+
+                  <SelectValue placeholder="All Services" />
+                </div>
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="all">
+                  All Services
+                </SelectItem>
+
+                <SelectItem value="pending">
+                  Pending
+                </SelectItem>
+
+                <SelectItem value="approved">
+                  Approved
+                </SelectItem>
+
+                <SelectItem value="rejected">
+                  Rejected
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
 
         {/* Services Table */}
-        <div className="overflow-hidden rounded-2xl border border-[#f1e5df] bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-[#f1e5df] px-5 py-4">
-            <h2 className="font-bold text-[#302521]">
-              All Services
-            </h2>
+        <Card className="overflow-hidden rounded-2xl border-[#f1e5df] shadow-sm">
 
-            <span className="text-sm text-gray-500">
-              {filteredServices.length} services
-            </span>
-          </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-[#f1e5df] px-5 py-4">
+            <div>
+              <CardTitle className="text-lg font-bold text-[#302521]">
+                All Services
+              </CardTitle>
 
-          {loading ? (
-            <div className="flex min-h-64 items-center justify-center">
-              <RefreshCw
-                className="animate-spin text-[#f45b4f]"
-                size={28}
-              />
+              <CardDescription className="mt-1">
+                Review and manage vendor service listings.
+              </CardDescription>
             </div>
-          ) : filteredServices.length === 0 ? (
-            <div className="flex min-h-64 flex-col items-center justify-center px-4 text-center">
-              <BriefcaseBusiness
-                size={38}
-                className="text-gray-300"
-              />
 
-              <p className="mt-3 font-semibold text-[#302521]">
-                No services found
-              </p>
+            <Badge
+              variant="secondary"
+              className="rounded-full px-3 py-1"
+            >
+              {filteredServices.length} Services
+            </Badge>
+          </CardHeader>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Try changing your search or filter.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px] text-left">
-                <thead className="bg-[#fffaf7] text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-5 py-4">Service</th>
-                    <th className="px-5 py-4">Vendor</th>
-                    <th className="px-5 py-4">Price</th>
-                    <th className="px-5 py-4">Created</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4 text-right">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex min-h-72 flex-col items-center justify-center gap-3">
+                <RefreshCw
+                  className="animate-spin text-[#f45b4f]"
+                  size={30}
+                />
 
-                <tbody className="divide-y divide-[#f4eeeb]">
-                  {filteredServices.map((service) => {
-                    const status = normalizeStatus(service.status);
-                    const busy = updatingId === service._id;
+                <p className="text-sm text-muted-foreground">
+                  Loading services...
+                </p>
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <div className="flex min-h-72 flex-col items-center justify-center px-4 text-center">
+                <div className="rounded-full bg-[#fff0eb] p-4">
+                  <PackageSearch
+                    size={35}
+                    className="text-[#f45b4f]"
+                  />
+                </div>
 
-                    return (
-                      <tr
-                        key={service._id}
-                        className="hover:bg-[#fffaf7]"
-                      >
-                        {/* Service */}
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-[#302521]">
-                            {service.title ||
-                              service.serviceName ||
-                              service.name ||
-                              "Untitled Service"}
-                          </p>
+                <h3 className="mt-4 font-semibold text-[#302521]">
+                  No Services Found
+                </h3>
 
-                          <p className="mt-1 text-xs text-gray-500">
-                            {service.category || "Uncategorized"}
-                          </p>
-                        </td>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Try changing your search or filter.
+                </p>
 
-                        {/* Vendor */}
-                        <td className="px-5 py-4 text-sm text-gray-600">
-                          {service.vendorName ||
-                            service.vendorId ||
-                            "N/A"}
-                        </td>
+                {(search || filter !== "all") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      setSearch("");
+                      setFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-[#fffaf7] hover:bg-[#fffaf7]">
+                        <TableHead className="min-w-[230px] px-5 py-4">
+                          Service
+                        </TableHead>
 
-                        {/* Price */}
-                        <td className="px-5 py-4 text-sm font-semibold text-[#302521]">
-                          {service.price != null
-                            ? `৳${service.price}`
-                            : "N/A"}
-                        </td>
+                        <TableHead className="min-w-[170px]">
+                          Vendor
+                        </TableHead>
 
-                        {/* Created Date */}
-                        <td className="px-5 py-4 text-sm text-gray-500">
-                          {service.createdAt
-                            ? new Date(
-                                service.createdAt
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </td>
+                        <TableHead className="min-w-[110px]">
+                          Price
+                        </TableHead>
 
-                        {/* Status */}
-                        <td className="px-5 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${getStatusStyle(
-                              service.status
-                            )}`}
+                        <TableHead className="min-w-[130px]">
+                          Created
+                        </TableHead>
+
+                        <TableHead className="min-w-[120px]">
+                          Status
+                        </TableHead>
+
+                        <TableHead className="min-w-[160px] text-right">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {paginatedServices.map((service) => {
+                        const status = getStatusValue(service.status);
+                        const busy = updatingId === service._id;
+
+                        return (
+                          <TableRow
+                            key={service._id}
+                            className="transition-colors hover:bg-[#fffaf7]"
                           >
-                            {status}
-                          </span>
-                        </td>
+                            {/* Service */}
+                            <TableCell className="px-5 py-4">
+                              <div>
+                                <p className="font-semibold text-[#302521]">
+                                  {getServiceName(service)}
+                                </p>
 
-                        {/* Actions */}
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {service.category || "Uncategorized"}
+                                </p>
+                              </div>
+                            </TableCell>
 
-                            {status !== "APPROVED" && (
-                              <button
-                                type="button"
-                                title="Approve"
-                                disabled={busy}
-                                onClick={() =>
-                                  void updateStatus(
-                                    service._id,
-                                    "APPROVED"
-                                  )
-                                }
-                                className="rounded-lg bg-green-50 p-2 text-green-600 transition hover:bg-green-100 disabled:opacity-40"
+                            {/* Vendor */}
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium text-[#302521]">
+                                  {service.vendorName || "Unknown Vendor"}
+                                </p>
+
+                                {service.vendorId && (
+                                  <p className="mt-1 max-w-[150px] truncate text-xs text-muted-foreground">
+                                    ID: {service.vendorId}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* Price */}
+                            <TableCell>
+                              <span className="font-semibold text-[#302521]">
+                                {service.price != null
+                                  ? `৳${Number(service.price).toLocaleString("en-BD")}`
+                                  : "N/A"}
+                              </span>
+                            </TableCell>
+
+                            {/* Created Date */}
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground">
+                                {formatDate(service.createdAt)}
+                              </span>
+                            </TableCell>
+
+                            {/* Status */}
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={`rounded-full px-3 py-1 font-medium ${getStatusClass(service.status)}`}
                               >
-                                <CheckCircle2 size={17} />
-                              </button>
-                            )}
+                                {normalizeStatus(service.status)}
+                              </Badge>
+                            </TableCell>
 
-                            {status !== "REJECTED" && (
-                              <button
-                                type="button"
-                                title="Reject"
-                                disabled={busy}
-                                onClick={() =>
-                                  void updateStatus(
-                                    service._id,
-                                    "REJECTED"
-                                  )
-                                }
-                                className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100 disabled:opacity-40"
-                              >
-                                <XCircle size={17} />
-                              </button>
-                            )}
+                            {/* Actions */}
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1.5">
 
-                            <button
-                              type="button"
-                              title="Delete"
-                              onClick={() => {
-                                setSelectedServiceId(service._id);
-                                setDeleteModal(true);
-                              }}
-                              disabled={busy}
-                              className="rounded-lg bg-gray-100 p-2 text-gray-600 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                            >
-                              <Trash2 size={17} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                                {status !== "APPROVED" && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    title="Approve Service"
+                                    disabled={updatingId !== null}
+                                    onClick={() =>
+                                      void updateStatus(
+                                        service._id,
+                                        "APPROVED"
+                                      )
+                                    }
+                                    className="h-9 w-9 text-green-600 hover:bg-green-50 hover:text-green-700"
+                                  >
+                                    {busy ? (
+                                      <RefreshCw
+                                        size={17}
+                                        className="animate-spin"
+                                      />
+                                    ) : (
+                                      <CheckCircle2 size={18} />
+                                    )}
+                                  </Button>
+                                )}
+
+                                {status !== "REJECTED" && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    title="Reject Service"
+                                    disabled={updatingId !== null}
+                                    onClick={() =>
+                                      void updateStatus(
+                                        service._id,
+                                        "REJECTED"
+                                      )
+                                    }
+                                    className="h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <XCircle size={18} />
+                                  </Button>
+                                )}
+
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  title="Delete Service"
+                                  disabled={updatingId !== null}
+                                  onClick={() => {
+                                    setSelectedService(service);
+                                    setDeleteModal(true);
+                                  }}
+                                  className="h-9 w-9 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                >
+                                  <Trash2 size={17} />
+                                </Button>
+
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex flex-col items-center justify-between gap-4 border-t border-[#f1e5df] px-5 py-4 sm:flex-row">
+
+                  <p className="text-sm text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-semibold text-[#302521]">
+                      {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                    </span>
+                    {" - "}
+                    <span className="font-semibold text-[#302521]">
+                      {Math.min(
+                        currentPage * ITEMS_PER_PAGE,
+                        filteredServices.length
+                      )}
+                    </span>
+                    {" of "}
+                    <span className="font-semibold text-[#302521]">
+                      {filteredServices.length}
+                    </span>
+                    {" services"}
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() =>
+                        setCurrentPage((prev) =>
+                          Math.max(1, prev - 1)
+                        )
+                      }
+                    >
+                      <ChevronLeft size={16} />
+                      Previous
+                    </Button>
+
+                    <div className="flex h-9 min-w-9 items-center justify-center rounded-md border border-[#f1e5df] px-3 text-sm font-semibold">
+                      {currentPage} / {totalPages}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() =>
+                        setCurrentPage((prev) =>
+                          Math.min(totalPages, prev + 1)
+                        )
+                      }
+                    >
+                      Next
+                      <ChevronRight size={16} />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteModal}
+        onOpenChange={(open) => {
+          if (updatingId !== null) return;
 
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-              <Trash2 size={26} className="text-red-500" />
+          setDeleteModal(open);
+
+          if (!open) {
+            setSelectedService(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-[420px] rounded-2xl">
+
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <Trash2
+                size={25}
+                className="text-red-500"
+              />
             </div>
 
-            <div className="mt-4 text-center">
-              <h2 className="text-xl font-bold text-gray-800">
-                Delete Service?
-              </h2>
+            <DialogTitle className="text-center text-xl">
+              Delete Service?
+            </DialogTitle>
 
-              <p className="mt-2 text-sm text-gray-500">
-                Are you sure you want to delete this service?
-                This action cannot be undone.
-              </p>
-            </div>
+            <DialogDescription className="text-center">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                {selectedService
+                  ? getServiceName(selectedService)
+                  : "this service"}
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteModal(false);
-                  setSelectedServiceId(null);
-                }}
-                disabled={updatingId !== null}
-                className="flex-1 rounded-xl border px-4 py-3 text-sm font-semibold disabled:opacity-50"
-              >
-                Cancel
-              </button>
+          <DialogFooter className="mt-3 flex flex-row gap-2 sm:justify-center">
 
-              <button
-                type="button"
-                onClick={() => void handleDeleteService()}
-                disabled={updatingId !== null}
-                className="flex-1 rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
-              >
-                {updatingId === selectedServiceId
-                  ? "Deleting..."
-                  : "Yes, Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              disabled={updatingId !== null}
+              onClick={() => {
+                setDeleteModal(false);
+                setSelectedService(null);
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              variant="destructive"
+              className="flex-1"
+              disabled={updatingId !== null}
+              onClick={() => void handleDeleteService()}
+            >
+              {updatingId === selectedService?._id ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Yes, Delete
+                </>
+              )}
+            </Button>
+
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
