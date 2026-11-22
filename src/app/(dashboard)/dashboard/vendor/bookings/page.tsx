@@ -323,7 +323,7 @@ export default function VendorBookingsPage() {
         <div className="rounded-2xl border border-[#eadfd9] bg-white p-8 text-center">
           <BriefcaseBusiness
             size={38}
-            className="mx-auto text-[#922638]"
+            className="mx-auto text-[#dc2027]"
           />
 
           <h2 className="mt-4 text-xl font-bold text-[#421b24]">
@@ -431,7 +431,7 @@ export default function VendorBookingsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search customer or service..."
-                className="w-full rounded-xl border border-[#eadfd9] bg-[#fcfaf9] py-3 pl-10 pr-4 text-sm outline-none focus:border-[#922638]"
+                className="w-full rounded-xl border border-[#eadfd9] bg-[#fcfaf9] py-3 pl-10 pr-4 text-sm outline-none focus:border-[#dc2027]"
               />
             </div>
 
@@ -451,7 +451,7 @@ export default function VendorBookingsPage() {
                   onClick={() => setStatusFilter(status)}
                   className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
                     statusFilter === status
-                      ? "bg-[#922638] text-white"
+                      ? "bg-[#dc2027] text-white"
                       : "bg-[#f8f2ef] text-[#8b7478] hover:bg-[#eee5e1]"
                   }`}
                 >
@@ -508,7 +508,7 @@ export default function VendorBookingsPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-[#922638]">
+                          <div className="flex h-full items-center justify-center text-[#dc2027]">
                             <User size={25} />
                           </div>
                         )}
@@ -540,7 +540,7 @@ export default function VendorBookingsPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-[#922638]">
+                          <div className="flex h-full items-center justify-center text-[#dc2027]">
                             <BriefcaseBusiness size={23} />
                           </div>
                         )}
@@ -556,7 +556,7 @@ export default function VendorBookingsPage() {
                         </p>
 
                         {booking.service?.price != null && (
-                          <p className="mt-1 text-xs font-semibold text-[#922638]">
+                          <p className="mt-1 text-xs font-semibold text-[#dc2027]">
                             ৳{booking.service.price.toLocaleString("en-BD")}
                           </p>
                         )}
@@ -568,7 +568,7 @@ export default function VendorBookingsPage() {
                       <div className="flex items-center gap-2 text-xs text-[#735b60]">
                         <CalendarDays
                           size={15}
-                          className="shrink-0 text-[#922638]"
+                          className="shrink-0 text-[#dc2027]"
                         />
                         {formatDate(booking.eventDate)}
                       </div>
@@ -576,7 +576,7 @@ export default function VendorBookingsPage() {
                       <div className="flex items-center gap-2 text-xs text-[#735b60]">
                         <MapPin
                           size={15}
-                          className="shrink-0 text-[#922638]"
+                          className="shrink-0 text-[#dc2027]"
                         />
 
                         <span className="truncate">
@@ -598,7 +598,7 @@ export default function VendorBookingsPage() {
 
                       <button
                         onClick={() => setSelectedBooking(booking)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#eadfd9] px-4 py-2.5 text-xs font-semibold text-[#922638] transition hover:bg-[#faf4f1]"
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#eadfd9] px-4 py-2.5 text-xs font-semibold text-[#dc2027] transition hover:bg-[#faf4f1]"
                       >
                         <Eye size={15} />
                         View Details
@@ -612,7 +612,7 @@ export default function VendorBookingsPage() {
                       <p className="line-clamp-2 text-xs leading-6 text-[#8b7478]">
                         <MessageSquare
                           size={13}
-                          className="mr-2 inline text-[#922638]"
+                          className="mr-2 inline text-[#dc2027]"
                         />
                         {booking.message}
                       </p>
@@ -647,7 +647,7 @@ export default function VendorBookingsPage() {
                           onClick={() =>
                             handleBookingAction(booking, "Confirmed")
                           }
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#922638] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#dc2027] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
                         >
                           {isProcessing ? (
                             <Loader2 size={16} className="animate-spin" />
@@ -671,7 +671,7 @@ export default function VendorBookingsPage() {
             })
           ) : (
             <div className="rounded-2xl border border-[#e9ded8] bg-white px-6 py-16 text-center shadow-sm">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f8f0ed] text-[#922638]">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f8f0ed] text-[#dc2027]">
                 <CalendarDays size={28} />
               </div>
 
@@ -693,7 +693,7 @@ export default function VendorBookingsPage() {
                     setSearch("");
                     setStatusFilter("All");
                   }}
-                  className="mt-4 text-sm font-semibold text-[#922638]"
+                  className="mt-4 text-sm font-semibold text-[#dc2027]"
                 >
                   Reset Filters
                 </button>
@@ -746,7 +746,7 @@ export default function VendorBookingsPage() {
                     className="h-14 w-14 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f8f0ed] text-[#922638]">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f8f0ed] text-[#dc2027]">
                     <User size={25} />
                   </div>
                 )}
@@ -777,7 +777,7 @@ export default function VendorBookingsPage() {
                     className="h-16 w-16 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#f8f0ed] text-[#922638]">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#f8f0ed] text-[#dc2027]">
                     <BriefcaseBusiness size={25} />
                   </div>
                 )}
@@ -794,7 +794,7 @@ export default function VendorBookingsPage() {
                   </p>
 
                   {selectedBooking.service?.price != null && (
-                    <p className="mt-1 text-sm font-semibold text-[#922638]">
+                    <p className="mt-1 text-sm font-semibold text-[#dc2027]">
                       ৳{selectedBooking.service.price.toLocaleString("en-BD")}
                     </p>
                   )}
@@ -876,7 +876,7 @@ export default function VendorBookingsPage() {
                   onClick={() =>
                     handleBookingAction(selectedBooking, "Confirmed")
                   }
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#922638] py-3 text-sm font-semibold text-white hover:bg-[#761d2e] disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#dc2027] py-3 text-sm font-semibold text-white hover:bg-[#761d2e] disabled:opacity-50"
                 >
                   <CheckCircle2 size={16} />
                   Accept
@@ -912,7 +912,7 @@ function StatCard({
   color: "burgundy" | "amber" | "green" | "red";
 }) {
   const styles = {
-    burgundy: "bg-[#f8f0ed] text-[#922638]",
+    burgundy: "bg-[#f8f0ed] text-[#dc2027]",
     amber: "bg-amber-50 text-amber-600",
     green: "bg-emerald-50 text-emerald-600",
     red: "bg-red-50 text-red-600",
@@ -954,7 +954,7 @@ function InfoBox({
       <p className="text-xs text-[#987f83]">{label}</p>
 
       <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#421b24]">
-        <span className="shrink-0 text-[#922638]">{icon}</span>
+        <span className="shrink-0 text-[#dc2027]">{icon}</span>
         {value}
       </p>
     </div>

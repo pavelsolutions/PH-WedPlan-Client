@@ -60,6 +60,7 @@ type Booking = {
 const getStatusStyle = (status: string) => {
   switch (status?.toLowerCase()) {
     case "accepted":
+    case "confirmed":
       return "bg-green-50 text-green-700 border-green-200";
 
     case "rejected":
@@ -178,9 +179,12 @@ export default function MyBookingsPage() {
     (booking) => booking.status?.toLowerCase() === "pending"
   ).length;
 
-  const acceptedCount = bookings.filter(
-    (booking) => booking.status?.toLowerCase() === "accepted"
-  ).length;
+ const acceptedCount = bookings.filter(
+  (booking) =>
+    ["accepted", "confirmed"].includes(
+      booking.status?.toLowerCase().trim()
+    )
+).length;
 
   const cancelledCount = bookings.filter(
     (booking) => booking.status?.toLowerCase() === "cancelled"

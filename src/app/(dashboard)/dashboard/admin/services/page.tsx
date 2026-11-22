@@ -422,8 +422,9 @@ export default function ManageServicesPage() {
 
             {/* Status Filter */}
             <Select
-              value={filter}
-              onValueChange={setFilter}
+              onValueChange={(value) =>
+                setFilter(value as "all" | "pending" | "approved" | "rejected")
+              }
             >
               <SelectTrigger className="h-11 w-full border-[#eee4df]">
                 <div className="flex items-center gap-2">

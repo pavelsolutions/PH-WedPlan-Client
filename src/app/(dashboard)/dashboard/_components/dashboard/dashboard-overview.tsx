@@ -191,8 +191,7 @@ export default function DashboardOverview({
   const data = dashboardData[role];
 
   return (
-    <div className="space-y-8">
-
+<div className="w-full min-w-0 space-y-6">
       {/* Welcome Section */}
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#302521] to-[#61443b] p-6 text-white shadow-lg sm:p-8">
 
