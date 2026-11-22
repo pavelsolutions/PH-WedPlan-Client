@@ -506,7 +506,7 @@ export default function AddServicePage() {
 
           <div className="rounded-2xl border border-purple-200 bg-white p-6 text-center shadow-sm sm:p-10">
 
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100 text-purple-700">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100 text-[#dc2027]">
               <Crown size={32} />
             </div>
 
@@ -523,16 +523,16 @@ export default function AddServicePage() {
             <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-3 rounded-xl bg-purple-50 p-4 text-left">
 
               <LockKeyhole
-                className="shrink-0 text-purple-700"
+                className="shrink-0 text-[#dc2027]"
                 size={22}
               />
 
               <div>
-                <p className="text-sm font-semibold text-purple-900">
+                <p className="text-sm font-semibold text-[#dc2027]">
                   Free plan limit reached
                 </p>
 
-                <p className="mt-1 text-xs text-purple-700">
+                <p className="mt-1 text-xs text-[#dc2027]">
                   3 out of 3 services have been used.
                 </p>
               </div>
@@ -540,8 +540,8 @@ export default function AddServicePage() {
             </div>
 
             <Link
-              href="/pricing"
-              className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-purple-700 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-purple-800"
+              href="/checkout"
+              className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-[#dc2027] px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-[#dc2027]"
             >
               <Crown size={17} />
               Upgrade to Premium

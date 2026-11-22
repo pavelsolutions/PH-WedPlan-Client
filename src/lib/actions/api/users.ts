@@ -87,3 +87,9 @@ export const updateAdminUser = async (
 
   return res.json();
 };
+
+
+export const getUserPremiumById = async (userId:string) => {
+  const response = await fetch(`${BASE_URL}/users/${userId}/premium`);
+  return response.json();
+};

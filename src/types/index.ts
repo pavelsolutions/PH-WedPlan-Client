@@ -62,6 +62,19 @@ export interface IProfile {
   subscriptionExpiresAt?: string | Date;
 }
 
+export interface Transaction {
+  vendorId: string;
+  stripeSessionId: string;
+  stripePaymentIntentId?: string;
+  amount: number;
+  currency: string;
+  plan: "monthly" | "yearly";
+  status: "pending" | "paid" | "failed" | "cancelled";
+  subscriptionId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Generic API Response
 export interface ApiResponse<T> {
   success: boolean;

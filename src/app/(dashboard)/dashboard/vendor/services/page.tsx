@@ -291,6 +291,12 @@ export default function VendorServicesPage() {
         }
     };
 
+    // const handleAddNewService = async() => {
+    //     if(!vendorId){
+    //         router.push(`/signin`);
+    //     } else if(user.role == '')
+    // }
+
     // Loading state
     if (sessionLoading || loading) {
         return (
