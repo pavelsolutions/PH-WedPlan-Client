@@ -54,7 +54,7 @@ import type { IProfile } from "@/types";
 import {
   getProfile,
   updateProfile,
-} from "@/lib/actions/api/users";
+} from "@/lib/api/users";
 
 import { useDashboardUser } from "@/app/context/dashboard-user-context";
 

@@ -18,7 +18,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminUsers, updateAdminUser } from "@/lib/actions/api/users";
+import { getAdminUsers, updateAdminUser } from "@/lib/api/users";
 
 
 type User = {

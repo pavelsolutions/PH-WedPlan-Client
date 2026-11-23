@@ -34,7 +34,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { IService } from "@/types";
-import { getAllServicesData } from "@/lib/actions/api/services";
+import { getAllServicesData } from "@/lib/api/services";
 import ServiceCard from "@/components/shared/ServiceCard";
 
 // Categories

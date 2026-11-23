@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { ArrowRight, MapPin, Star } from "lucide-react";
 import ServiceCard from "../shared/ServiceCard";
-import { getAllServices } from "@/lib/actions/api/services";
+import { getAllServices } from "@/lib/api/services";
 import { IService } from "@/types";
 
 // const featuredServices = [

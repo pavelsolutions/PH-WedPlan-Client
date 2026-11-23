@@ -37,7 +37,7 @@ import {
 
 import {
   getVendorBookings,
-} from "@/lib/actions/api/bookings";
+} from "@/lib/api/bookings";
 
 import {
   updateVendorBookingStatus,

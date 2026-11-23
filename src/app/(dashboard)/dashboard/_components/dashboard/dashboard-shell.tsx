@@ -20,6 +20,9 @@ import {
   LogOut,
   User,
   Menu,
+  CalendarDays,
+  LayoutDashboard,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 import {
@@ -66,8 +69,28 @@ function DashboardShellContent({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Dynamic navigation based on user role
-  const navLinks = navigation[role] ?? [];
-  
+  const navbarNavigation = {
+    vendor: [
+      { title: "Home", href: "/" },
+      { title: "Browse Services", href: "/services" },
+      { title: "My Services", href: "/dashboard/vendor/services" },
+      { title: "Bookings", href: "/dashboard/vendor/bookings" },
+    ],
+    customer: [
+      { title: "Home", href: "/" },
+      { title: "Browse Services", href: "/services" },
+      { title: "My Bookings", href: "/dashboard/customer/bookings" },
+    ],
+    admin: [
+      { title: "Home", href: "/" },
+      { title: "Browse Services", href: "/services" },
+      { title: "Users", href: "/dashboard/admin/users" },
+      { title: "Services", href: "/dashboard/admin/services" },
+    ],
+  };
+
+  const navLinks = navbarNavigation[role] ?? [];
+
 
   const initials = (user.name || "User")
     .split(" ")
@@ -281,7 +304,7 @@ function DashboardShellContent({
         </div>
 
         {/* Main Workspace */}
-        <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-[196px_minmax(0,1fr)] sm:gap-6">
+        <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-[250px_minmax(0,1fr)] sm:gap-6">
 
           {/* Sidebar */}
           <div className="hidden sm:block">

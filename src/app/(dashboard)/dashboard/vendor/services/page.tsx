@@ -20,7 +20,7 @@ import { authClient } from "@/lib/auth-client";
 import {
     deleteService,
     getVendorServices
-} from "@/lib/actions/api/services";
+} from "@/lib/api/services";
 
 import { IService } from "@/types";
 import { toast } from "sonner";

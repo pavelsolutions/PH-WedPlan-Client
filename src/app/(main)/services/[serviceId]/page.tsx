@@ -26,7 +26,7 @@ import {
   createBooking,
   getMyBookings,
 } from "@/lib/actions/bookings";
-import { getServiceById } from "@/lib/actions/api/services";
+import { getServiceById } from "@/lib/api/services";
 import { toast } from "sonner";
 
 // ==============================

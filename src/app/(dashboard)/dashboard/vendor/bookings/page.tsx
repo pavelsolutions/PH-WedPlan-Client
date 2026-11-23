@@ -26,7 +26,7 @@ import {
 
 import {
   getVendorBookings,
-} from "@/lib/actions/api/bookings";
+} from "@/lib/api/bookings";
 import { updateVendorBookingStatus } from "@/lib/actions/bookings";
 
 type BookingStatus =

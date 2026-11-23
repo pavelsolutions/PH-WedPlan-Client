@@ -5,10 +5,12 @@ import HowItWorksSection from "@/components/home/HowItWorksSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FinalCTASection from "@/components/home/FinalCTASection";
 import WeddingServiceCategories from "@/components/home/WeddingServiceCategories";
+import Home from "@/components/home/Home";
 
 export default function HomePage() {
   return (
     <>
+      {/* <Home /> */}
       <HeroSection />
       <WeddingServiceCategories/>
       {/* <PopularCategoriesSection /> */}

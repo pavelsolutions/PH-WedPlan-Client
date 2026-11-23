@@ -23,7 +23,7 @@ import {
   deleteAdminService,
   getAdminServices,
   updateAdminServices,
-} from "@/lib/actions/api/services";
+} from "@/lib/api/services";
 
 // Shadcn UI
 import {
