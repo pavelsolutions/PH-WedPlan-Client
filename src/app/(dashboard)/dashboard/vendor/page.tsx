@@ -1,1068 +1,631 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  BriefcaseBusiness,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Plus,
+  ArrowRight,
+  Eye,
+  MapPin,
+  RefreshCw,
+  Sparkles,
+  XCircle,
+  PackageCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  CalendarDays,
-  MapPin,
-  Search,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  RefreshCw,
-  ClipboardList,
-  Mail,
-  User,
-  BriefcaseBusiness,
-  MessageSquare,
-  Filter,
-  X,
-  Loader2,
-} from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-import {
-  getVendorBookings,
-} from "@/lib/api/bookings";
+type Service = {
+  _id?: string;
+  id?: string;
+  serviceName?: string;
+  title?: string;
+  category?: string;
+  price?: number;
+  status?: string;
+  location?: string;
+  createdAt?: string;
+};
 
-import {
-  updateVendorBookingStatus,
-} from "@/lib/actions/bookings";
-
-type BookingStatus =
-  | "Pending"
-  | "Confirmed"
-  | "Rejected"
-  | "Cancelled"
-  | "Completed";
-
-interface VendorBooking {
-  _id: string;
-  customerId: string;
-  serviceId: string;
-  eventDate: string;
-  eventLocation: string;
-  message: string;
-  status: BookingStatus | string;
-  createdAt: string;
-
+type Booking = {
+  _id?: string;
+  id?: string;
+  customerName?: string;
   customer?: {
-    _id?: string;
     name?: string;
     email?: string;
-    image?: string;
   };
-
+  serviceName?: string;
   service?: {
-    _id?: string;
-    name?: string;
     serviceName?: string;
-    image?: string;
-    category?: string;
-    price?: number;
+    title?: string;
   };
+  eventDate?: string;
+  eventLocation?: string;
+  status?: string;
+  createdAt?: string;
+};
+
+function getArray<T>(result: any, keys: string[] = []): T[] {
+  if (Array.isArray(result)) return result;
+
+  for (const key of keys) {
+    if (Array.isArray(result?.[key])) return result[key];
+    if (Array.isArray(result?.data?.[key])) return result.data[key];
+  }
+
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.result)) return result.result;
+
+  return [];
 }
 
-type Confirmation = {
-  booking: VendorBooking;
-  status: "Confirmed" | "Rejected";
-} | null;
-
-const statusStyles: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  confirmed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  rejected: "bg-red-50 text-red-700 border-red-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
-  completed: "bg-blue-50 text-blue-700 border-blue-200",
-};
-
-const normalizeStatus = (status: string) =>
-  status?.toLowerCase().trim() || "pending";
-
-const formatDate = (date: string) => {
+function formatDate(date?: string) {
   if (!date) return "Not specified";
-
-  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date)
-    ? new Date(`${date}T00:00:00`)
-    : new Date(date);
-
-  if (Number.isNaN(parsed.getTime())) return date;
-
-  return parsed.toLocaleDateString("en-BD", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-};
-
-const formatDateTime = (date: string) => {
-  if (!date) return "Not available";
 
   const parsed = new Date(date);
 
-  if (Number.isNaN(parsed.getTime())) return "Not available";
+  if (Number.isNaN(parsed.getTime())) return "Not specified";
 
-  return parsed.toLocaleString("en-BD", {
-    day: "numeric",
+  return parsed.toLocaleDateString("en-US", {
     month: "short",
+    day: "numeric",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
-};
+}
 
-export default function VendorBookingsPage() {
+function getStatusClass(status?: string) {
+  switch (status?.toLowerCase()) {
+    case "accepted":
+    case "approved":
+    case "active":
+      return "bg-green-50 text-green-700";
+
+    case "rejected":
+    case "cancelled":
+    case "blocked":
+      return "bg-red-50 text-red-600";
+
+    case "pending":
+      return "bg-amber-50 text-amber-700";
+
+    default:
+      return "bg-gray-100 text-gray-600";
+  }
+}
+
+export default function VendorDashboardPage() {
   const { data: session, isPending: sessionLoading } =
     authClient.useSession();
 
   const vendorId = session?.user?.id;
 
-  const [bookings, setBookings] = useState<VendorBooking[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-
-  const [selectedBooking, setSelectedBooking] =
-    useState<VendorBooking | null>(null);
-
-  const [confirmation, setConfirmation] =
-    useState<Confirmation>(null);
-
-  const [processingId, setProcessingId] =
-    useState<string | null>(null);
-
-  // Fetch bookings
-  const fetchBookings = async (showLoader = true) => {
+  const fetchDashboardData = useCallback(async () => {
     if (!vendorId) return;
 
     try {
-      if (showLoader) {
-        setLoading(true);
-      } else {
-        setRefreshing(true);
-      }
-
+      setLoading(true);
       setError("");
 
-      const data = await getVendorBookings(vendorId);
+      const [servicesResponse, bookingsResponse] =
+        await Promise.all([
+          fetch(
+            `${API_URL}/vendor/services?vendorId=${encodeURIComponent(vendorId)}`,
+            { credentials: "include", cache: "no-store" }
+          ),
+          fetch(
+            `${API_URL}/vendor/bookings/${encodeURIComponent(vendorId)}`,
+            { credentials: "include", cache: "no-store" }
+          ),
+        ]);
 
-      setBookings(Array.isArray(data) ? data : []);
+      if (!servicesResponse.ok || !bookingsResponse.ok) {
+        throw new Error("Failed to load dashboard information.");
+      }
+
+      const [servicesData, bookingsData] = await Promise.all([
+        servicesResponse.json(),
+        bookingsResponse.json(),
+      ]);
+
+      setServices(
+        getArray<Service>(servicesData, ["services"])
+      );
+
+      setBookings(
+        getArray<Booking>(bookingsData, ["bookings"])
+      );
     } catch (err) {
-      console.error("Vendor bookings error:", err);
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to load bookings";
-
-      setError(message);
-      toast.error(message);
+      console.error("Vendor dashboard error:", err);
+      setError("Unable to load dashboard data. Please try again.");
+      toast.error("Failed to load dashboard information.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  };
+  }, [vendorId]);
 
   useEffect(() => {
     if (sessionLoading) return;
 
-    if (!vendorId) {
-      setBookings([]);
+    if (vendorId) {
+      fetchDashboardData();
+    } else {
       setLoading(false);
-      return;
     }
+  }, [vendorId, sessionLoading, fetchDashboardData]);
 
-    fetchBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vendorId, sessionLoading]);
-
-  // Open confirmation dialog
-  const openConfirmation = (
-    booking: VendorBooking,
-    status: "Confirmed" | "Rejected"
-  ) => {
-    if (normalizeStatus(booking.status) !== "pending") {
-      toast.error("This booking has already been processed.");
-      return;
-    }
-
-    setConfirmation({ booking, status });
-  };
-
-  // Accept / Reject booking
-  const handleBookingAction = async () => {
-    if (!confirmation || !vendorId) return;
-
-    const { booking, status } = confirmation;
-
-    if (normalizeStatus(booking.status) !== "pending") {
-      toast.error("This booking has already been processed.");
-      setConfirmation(null);
-      return;
-    }
-
-    try {
-      setProcessingId(booking._id);
-
-      const response = await updateVendorBookingStatus(
-        vendorId,
-        booking._id,
-        status
-      );
-
-      // Update booking list
-      setBookings((previous) =>
-        previous.map((item) =>
-          item._id === booking._id
-            ? { ...item, status }
-            : item
+  const stats = useMemo(() => {
+    const activeServices = services.filter(
+      (service) =>
+        ["approved", "active"].includes(
+          service.status?.toLowerCase() || ""
         )
-      );
+    ).length;
 
-      // Update details modal
-      setSelectedBooking((previous) =>
-        previous?._id === booking._id
-          ? { ...previous, status }
-          : previous
-      );
+    const pendingBookings = bookings.filter(
+      (booking) =>
+        booking.status?.toLowerCase() === "pending"
+    ).length;
 
-      setConfirmation(null);
+    const acceptedBookings = bookings.filter(
+      (booking) =>
+        booking.status?.toLowerCase() === "accepted"
+    ).length;
 
-      toast.success(
-        response?.message ||
-          `Booking ${status === "Confirmed" ? "accepted" : "rejected"} successfully`
-      );
-    } catch (err) {
-      console.error("Booking action error:", err);
+    return [
+      {
+        title: "Total Services",
+        value: services.length,
+        description: "Services you've created",
+        icon: BriefcaseBusiness,
+        iconBg: "bg-[#fce9eb]",
+        iconColor: "text-[#92283b]",
+      },
+      {
+        title: "Active Services",
+        value: activeServices,
+        description: "Approved services",
+        icon: PackageCheck,
+        iconBg: "bg-green-50",
+        iconColor: "text-green-600",
+      },
+      {
+        title: "Pending Bookings",
+        value: pendingBookings,
+        description: "Awaiting your response",
+        icon: Clock3,
+        iconBg: "bg-amber-50",
+        iconColor: "text-amber-600",
+      },
+      {
+        title: "Accepted Bookings",
+        value: acceptedBookings,
+        description: "Confirmed requests",
+        icon: CheckCircle2,
+        iconBg: "bg-blue-50",
+        iconColor: "text-blue-600",
+      },
+    ];
+  }, [services, bookings]);
 
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to update booking";
+  const recentBookings = useMemo(() => {
+    return [...bookings]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime()
+      )
+      .slice(0, 5);
+  }, [bookings]);
 
-      toast.error(message);
+  const recentServices = useMemo(() => {
+    return [...services]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime()
+      )
+      .slice(0, 4);
+  }, [services]);
 
-      await fetchBookings(false);
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  // Statistics
-  const stats = useMemo(() => ({
-    total: bookings.length,
-
-    pending: bookings.filter(
-      (b) => normalizeStatus(b.status) === "pending"
-    ).length,
-
-    confirmed: bookings.filter(
-      (b) => normalizeStatus(b.status) === "confirmed"
-    ).length,
-
-    rejected: bookings.filter(
-      (b) => normalizeStatus(b.status) === "rejected"
-    ).length,
-  }), [bookings]);
-
-  // Search and filter
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) => {
-      const customerName = booking.customer?.name || "";
-
-      const serviceName =
-        booking.service?.serviceName ||
-        booking.service?.name ||
-        "";
-
-      const searchText = search.toLowerCase();
-
-      const matchesSearch =
-        customerName.toLowerCase().includes(searchText) ||
-        (booking.customer?.email || "")
-          .toLowerCase()
-          .includes(searchText) ||
-        serviceName.toLowerCase().includes(searchText) ||
-        (booking.eventLocation || "")
-          .toLowerCase()
-          .includes(searchText);
-
-      const matchesStatus =
-        statusFilter === "All" ||
-        normalizeStatus(booking.status) ===
-          statusFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [bookings, search, statusFilter]);
-
-  // Loading
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#fcfaf9] p-5 sm:p-8">
-        <div className="mx-auto max-w-[1500px] space-y-5">
-          <div className="h-16 animate-pulse rounded-xl bg-[#eee5e1]" />
-
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-28 animate-pulse rounded-2xl bg-[#eee5e1]"
-              />
-            ))}
-          </div>
-
-          {Array.from({ length: 4 }).map((_, i) => (
+      <div className="space-y-6">
+        <div className="h-24 animate-pulse rounded-xl bg-white" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
             <div
-              key={i}
-              className="h-36 animate-pulse rounded-2xl bg-[#eee5e1]"
+              key={item}
+              className="h-32 animate-pulse rounded-xl bg-white"
             />
           ))}
         </div>
+        <div className="h-72 animate-pulse rounded-xl bg-white" />
       </div>
     );
   }
 
-  // Login required
   if (!vendorId) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center bg-[#fcfaf9] p-6">
-        <div className="rounded-2xl border border-[#eadfd9] bg-white p-8 text-center">
-          <BriefcaseBusiness
-            size={38}
-            className="mx-auto text-[#dc2027]"
-          />
-
-          <h2 className="mt-4 text-xl font-bold text-[#421b24]">
-            Login Required
-          </h2>
-
-          <p className="mt-2 text-sm text-[#8b7478]">
-            Please login to view your booking requests.
-          </p>
-        </div>
+      <div className="rounded-xl border border-[#eadfd8] bg-white p-8 text-center">
+        <XCircle className="mx-auto mb-3 text-red-500" size={36} />
+        <h2 className="text-lg font-semibold text-[#302521]">
+          Vendor session not found
+        </h2>
+        <p className="mt-2 text-sm text-gray-500">
+          Please sign in with your vendor account to continue.
+        </p>
+        <Link
+          href="/signin"
+          className="mt-5 inline-flex rounded-lg bg-[#92283b] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#762031]"
+        >
+          Sign In
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fcfaf9]">
-      <div className="mx-auto max-w-[1500px] space-y-7 p-5 sm:p-7 lg:p-8">
-
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 border-b border-[#e9dfda] pb-5 sm:flex-row sm:items-center">
+    <div className="min-w-0 space-y-6">
+      {/* Welcome Header */}
+      <section className="relative overflow-hidden rounded-xl bg-[#92283b] p-6 text-white sm:p-8">
+        <div className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
-            <h1 className="font-serif text-3xl font-bold text-[#421b24]">
-              Booking Requests
+            <div className="mb-3 flex items-center gap-2 text-sm text-white/80">
+              <Sparkles size={16} />
+              Vendor Workspace
+            </div>
+
+            <h1 className="text-2xl font-bold sm:text-3xl">
+              Welcome back, {session?.user?.name || "Vendor"}!
             </h1>
 
-            <p className="mt-2 text-sm text-[#8b7478]">
-              Manage customer booking requests for your wedding services.
+            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+              Manage your wedding services, track customer booking
+              requests, and grow your business with WedPlan.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/vendor/services/add"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#92283b] transition hover:bg-[#fff1f2]"
+          >
+            <Plus size={18} />
+            Add New Service
+          </Link>
+        </div>
+
+        <div className="absolute -right-10 -top-20 h-64 w-64 rounded-full border-[35px] border-white/10" />
+        <div className="absolute -bottom-28 right-40 h-64 w-64 rounded-full border-[35px] border-white/10" />
+      </section>
+
+      {/* Error Message */}
+      {error && (
+        <div className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-red-600">{error}</p>
+          <button
+            onClick={fetchDashboardData}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-red-700"
+          >
+            <RefreshCw size={15} />
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Statistics */}
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[#302521]">
+              Dashboard Overview
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Here's what's happening with your business.
             </p>
           </div>
 
           <button
-            onClick={() => fetchBookings(false)}
-            disabled={refreshing}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#eadfd9] bg-white px-4 py-2.5 text-sm font-semibold text-[#421b24] hover:bg-[#faf4f1] disabled:opacity-60"
+            onClick={fetchDashboardData}
+            className="rounded-lg border border-[#eadfd8] bg-white p-2.5 text-gray-500 transition hover:bg-[#fcfaf8] hover:text-[#92283b]"
+            title="Refresh dashboard"
           >
-            <RefreshCw
-              size={16}
-              className={refreshing ? "animate-spin" : ""}
-            />
-            Refresh
+            <RefreshCw size={17} />
           </button>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <span>{error}</span>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
 
-            <button
-              onClick={() => fetchBookings()}
-              className="font-semibold"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {/* Statistics */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard
-            icon={<ClipboardList size={22} />}
-            label="Total Bookings"
-            value={stats.total}
-            subtitle="All requests"
-            color="burgundy"
-          />
-
-          <StatCard
-            icon={<Clock size={22} />}
-            label="Pending Requests"
-            value={stats.pending}
-            subtitle="Waiting for action"
-            color="amber"
-          />
-
-          <StatCard
-            icon={<CheckCircle2 size={22} />}
-            label="Confirmed Bookings"
-            value={stats.confirmed}
-            subtitle="Accepted requests"
-            color="green"
-          />
-
-          <StatCard
-            icon={<XCircle size={22} />}
-            label="Rejected Requests"
-            value={stats.rejected}
-            subtitle="Declined requests"
-            color="red"
-          />
-        </div>
-
-        {/* Search and Filters */}
-        <div className="rounded-2xl border border-[#eadfd9] bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-md">
-              <Search
-                size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#ad9699]"
-              />
-
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search customer or service..."
-                className="w-full rounded-xl border border-[#eadfd9] bg-[#fcfaf9] py-3 pl-10 pr-4 text-sm outline-none focus:border-[#dc2027]"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Filter size={16} className="text-[#987f83]" />
-
-              {[
-                "All",
-                "Pending",
-                "Confirmed",
-                "Rejected",
-                "Cancelled",
-                "Completed",
-              ].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                    statusFilter === status
-                      ? "bg-[#dc2027] text-white"
-                      : "bg-[#f8f2ef] text-[#8b7478] hover:bg-[#eee5e1]"
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div>
-          <h2 className="font-serif text-xl font-bold text-[#421b24]">
-            Customer Requests
-          </h2>
-
-          <p className="mt-1 text-xs text-[#a18c90]">
-            Showing {filteredBookings.length} of {bookings.length} requests
-          </p>
-        </div>
-
-        {/* Booking List */}
-        <div className="space-y-4">
-          {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => {
-              const status = normalizeStatus(booking.status);
-              const isPending = status === "pending";
-              const isProcessing = processingId === booking._id;
-
-              const customerName =
-                booking.customer?.name || "Unknown Customer";
-
-              const serviceName =
-                booking.service?.serviceName ||
-                booking.service?.name ||
-                "Wedding Service";
-
-              return (
-                <div
-                  key={booking._id}
-                  className="rounded-2xl border border-[#e9ded8] bg-white p-5 shadow-sm transition hover:shadow-md"
-                >
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
-
-                    {/* Customer */}
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-[#f8f0ed]">
-                        {booking.customer?.image ? (
-                          <img
-                            src={booking.customer.image}
-                            alt={customerName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-[#dc2027]">
-                            <User size={25} />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <h3 className="truncate font-semibold text-[#421b24]">
-                          {customerName}
-                        </h3>
-
-                        <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-[#987f83]">
-                          <Mail size={12} />
-                          {booking.customer?.email || "No email"}
-                        </p>
-
-                        <p className="mt-1 text-xs text-[#b19b9f]">
-                          Request #{booking._id.slice(-7)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Service */}
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f8f0ed]">
-                        {booking.service?.image ? (
-                          <img
-                            src={booking.service.image}
-                            alt={serviceName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-[#dc2027]">
-                            <BriefcaseBusiness size={23} />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <h4 className="truncate text-sm font-semibold text-[#421b24]">
-                          {serviceName}
-                        </h4>
-
-                        <p className="mt-1 text-xs text-[#987f83]">
-                          {booking.service?.category || "Wedding Service"}
-                        </p>
-
-                        {booking.service?.price != null && (
-                          <p className="mt-1 text-xs font-semibold text-[#dc2027]">
-                            ৳{booking.service.price.toLocaleString("en-BD")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Event Details */}
-                    <div className="flex flex-1 flex-col gap-2">
-                      <div className="flex items-center gap-2 text-xs text-[#735b60]">
-                        <CalendarDays size={15} className="shrink-0 text-[#dc2027]" />
-                        {formatDate(booking.eventDate)}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-[#735b60]">
-                        <MapPin size={15} className="shrink-0 text-[#dc2027]" />
-
-                        <span className="truncate">
-                          {booking.eventLocation || "Location not specified"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 lg:flex-col lg:items-end">
-                      <span
-                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${
-                          statusStyles[status] ||
-                          "border-gray-200 bg-gray-50 text-gray-600"
-                        }`}
-                      >
-                        {status}
-                      </span>
-
-                      <button
-                        onClick={() => setSelectedBooking(booking)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#eadfd9] px-4 py-2.5 text-xs font-semibold text-[#dc2027] transition hover:bg-[#faf4f1]"
-                      >
-                        <Eye size={15} />
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Customer Message */}
-                  {booking.message && (
-                    <div className="mt-5 rounded-xl bg-[#fcfaf9] p-3">
-                      <p className="line-clamp-2 text-xs leading-6 text-[#8b7478]">
-                        <MessageSquare size={13} className="mr-2 inline text-[#dc2027]" />
-                        {booking.message}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Accept / Reject */}
-                  {isPending ? (
-                    <div className="mt-5 flex flex-col gap-3 border-t border-[#f0e8e4] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-[#987f83]">
-                        This request is waiting for your response.
-                      </p>
-
-                      <div className="flex gap-3">
-                        <button
-                          disabled={isProcessing}
-                          onClick={() =>
-                            openConfirmation(booking, "Rejected")
-                          }
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 sm:flex-none"
-                        >
-                          <XCircle size={16} />
-                          Reject
-                        </button>
-
-                        <button
-                          disabled={isProcessing}
-                          onClick={() =>
-                            openConfirmation(booking, "Confirmed")
-                          }
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#dc2027] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#761d2e] disabled:opacity-50 sm:flex-none"
-                        >
-                          <CheckCircle2 size={16} />
-                          Accept
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-5 flex items-center gap-2 border-t border-[#f0e8e4] pt-4 text-xs text-[#987f83]">
-                      <CheckCircle2 size={14} />
-                      This request has already been processed. No further action is available.
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            <div className="rounded-2xl border border-[#e9ded8] bg-white px-6 py-16 text-center shadow-sm">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f8f0ed] text-[#dc2027]">
-                <CalendarDays size={28} />
-              </div>
-
-              <h3 className="mt-4 font-serif text-xl font-bold text-[#421b24]">
-                {bookings.length === 0
-                  ? "No Booking Requests Yet"
-                  : "No Bookings Found"}
-              </h3>
-
-              <p className="mt-2 text-sm text-[#8b7478]">
-                {bookings.length === 0
-                  ? "Customer booking requests will appear here when someone books your services."
-                  : "Try changing your search or status filter."}
-              </p>
-
-              {bookings.length > 0 && (
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setStatusFilter("All");
-                  }}
-                  className="mt-4 text-sm font-semibold text-[#dc2027]"
-                >
-                  Reset Filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Booking Details Modal */}
-      {selectedBooking && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setSelectedBooking(null)}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#eadfd9] bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[#eee5e1] pb-4">
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-[#421b24]">
-                  Booking Details
-                </h2>
-
-                <p className="mt-1 text-xs text-[#987f83]">
-                  Request #{selectedBooking._id}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="rounded-full p-2 text-[#8b7478] hover:bg-[#f8f2ef]"
+            return (
+              <div
+                key={stat.title}
+                className="rounded-xl border border-[#eadfd8] bg-white p-5 transition hover:-translate-y-1 hover:shadow-md"
               >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Customer */}
-            <div className="mt-5">
-              <h3 className="mb-3 text-sm font-bold text-[#421b24]">
-                Customer Information
-              </h3>
-
-              <div className="flex items-center gap-3 rounded-xl bg-[#fcfaf9] p-4">
-                {selectedBooking.customer?.image ? (
-                  <img
-                    src={selectedBooking.customer.image}
-                    alt="Customer"
-                    className="h-14 w-14 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f8f0ed] text-[#dc2027]">
-                    <User size={25} />
-                  </div>
-                )}
-
-                <div>
-                  <p className="font-semibold text-[#421b24]">
-                    {selectedBooking.customer?.name || "Unknown Customer"}
-                  </p>
-
-                  <p className="mt-1 text-sm text-[#8b7478]">
-                    {selectedBooking.customer?.email || "No email"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Service */}
-            <div className="mt-5">
-              <h3 className="mb-3 text-sm font-bold text-[#421b24]">
-                Service Information
-              </h3>
-
-              <div className="flex items-center gap-3 rounded-xl bg-[#fcfaf9] p-4">
-                {selectedBooking.service?.image ? (
-                  <img
-                    src={selectedBooking.service.image}
-                    alt="Service"
-                    className="h-16 w-16 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#f8f0ed] text-[#dc2027]">
-                    <BriefcaseBusiness size={25} />
-                  </div>
-                )}
-
-                <div>
-                  <p className="font-semibold text-[#421b24]">
-                    {selectedBooking.service?.serviceName ||
-                      selectedBooking.service?.name ||
-                      "Wedding Service"}
-                  </p>
-
-                  <p className="mt-1 text-xs text-[#8b7478]">
-                    {selectedBooking.service?.category || ""}
-                  </p>
-
-                  {selectedBooking.service?.price != null && (
-                    <p className="mt-1 text-sm font-semibold text-[#dc2027]">
-                      ৳{selectedBooking.service.price.toLocaleString("en-BD")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Event Information */}
-            <div className="mt-5">
-              <h3 className="mb-3 text-sm font-bold text-[#421b24]">
-                Event Information
-              </h3>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <InfoBox
-                  label="Event Date"
-                  value={formatDate(selectedBooking.eventDate)}
-                  icon={<CalendarDays size={16} />}
-                />
-
-                <InfoBox
-                  label="Event Location"
-                  value={selectedBooking.eventLocation || "Not specified"}
-                  icon={<MapPin size={16} />}
-                />
-
-                <div className="rounded-xl bg-[#fcfaf9] p-4">
-                  <p className="text-xs text-[#987f83]">Request Status</p>
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
-                      statusStyles[normalizeStatus(selectedBooking.status)] || ""
-                    }`}
+                <div className="flex items-center justify-between">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-lg ${stat.iconBg}`}
                   >
-                    {selectedBooking.status}
+                    <Icon size={21} className={stat.iconColor} />
+                  </div>
+
+                  <span className="text-3xl font-bold text-[#302521]">
+                    {stat.value}
                   </span>
                 </div>
 
-                <InfoBox
-                  label="Request Submitted"
-                  value={formatDateTime(selectedBooking.createdAt)}
-                  icon={<Clock size={16} />}
-                />
+                <h3 className="mt-4 text-sm font-semibold text-[#302521]">
+                  {stat.title}
+                </h3>
+                <p className="mt-1 text-xs text-gray-500">
+                  {stat.description}
+                </p>
               </div>
-            </div>
-
-            {/* Customer Message */}
-            <div className="mt-5">
-              <h3 className="mb-3 text-sm font-bold text-[#421b24]">
-                Customer Message
-              </h3>
-
-              <div className="rounded-xl bg-[#fcfaf9] p-4 text-sm leading-7 text-[#735b60]">
-                {selectedBooking.message ||
-                  "No additional message provided."}
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            {normalizeStatus(selectedBooking.status) === "pending" && (
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button
-                  disabled={processingId === selectedBooking._id}
-                  onClick={() =>
-                    openConfirmation(selectedBooking, "Rejected")
-                  }
-                  className="flex items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                >
-                  <XCircle size={16} />
-                  Reject
-                </button>
-
-                <button
-                  disabled={processingId === selectedBooking._id}
-                  onClick={() =>
-                    openConfirmation(selectedBooking, "Confirmed")
-                  }
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#dc2027] py-3 text-sm font-semibold text-white hover:bg-[#761d2e] disabled:opacity-50"
-                >
-                  <CheckCircle2 size={16} />
-                  Accept
-                </button>
-              </div>
-            )}
-
-            <button
-              onClick={() => setSelectedBooking(null)}
-              className="mt-3 w-full rounded-xl border border-[#eadfd9] py-3 text-sm font-semibold text-[#421b24] hover:bg-[#faf4f1]"
-            >
-              Close Details
-            </button>
-          </div>
+            );
+          })}
         </div>
-      )}
+      </section>
 
-      {/* SHADCN ALERT DIALOG */}
-      <AlertDialog
-        open={!!confirmation}
-        onOpenChange={(open) => {
-          if (!open && !processingId) {
-            setConfirmation(null);
-          }
-        }}
-      >
-        <AlertDialogContent className="max-w-[420px] rounded-2xl border-[#eadfd9] bg-white p-6">
+      {/* Quick Actions */}
+      <section className="rounded-xl border border-[#eadfd8] bg-white p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-[#302521]">
+          Quick Actions
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Manage your vendor account quickly.
+        </p>
 
-          {/* Icon */}
-          <div
-            className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
-              confirmation?.status === "Confirmed"
-                ? "bg-emerald-50 text-emerald-600"
-                : "bg-red-50 text-red-600"
-            }`}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Link
+            href="/dashboard/vendor/services/add"
+            className="flex items-center gap-3 rounded-lg border border-[#eadfd8] p-4 transition hover:border-[#92283b] hover:bg-[#fcfaf8]"
           >
-            {confirmation?.status === "Confirmed" ? (
-              <CheckCircle2 size={32} />
-            ) : (
-              <XCircle size={32} />
-            )}
-          </div>
-
-          <AlertDialogHeader className="mt-3 text-center sm:text-center">
-            <AlertDialogTitle className="font-serif text-2xl font-bold text-[#421b24]">
-              {confirmation?.status === "Confirmed"
-                ? "Confirm Booking?"
-                : "Reject Booking?"}
-            </AlertDialogTitle>
-
-            <AlertDialogDescription className="text-sm leading-6 text-[#8b7478]">
-              {confirmation?.status === "Confirmed"
-                ? "Are you sure you want to accept this booking request? The booking status will be updated to confirmed."
-                : "Are you sure you want to reject this booking request? The booking status will be updated to rejected."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {/* Customer Information */}
-          {confirmation && (
-            <div className="rounded-xl border border-[#eee5e1] bg-[#fcfaf9] p-4">
-              <p className="text-xs font-medium text-[#987f83]">
-                Customer
-              </p>
-
-              <p className="mt-1 font-semibold text-[#421b24]">
-                {confirmation.booking.customer?.name ||
-                  "Unknown Customer"}
-              </p>
-
-              <p className="mt-1 text-xs text-[#987f83]">
-                {confirmation.booking.service?.serviceName ||
-                  confirmation.booking.service?.name ||
-                  "Wedding Service"}
-              </p>
-
-              <p className="mt-1 text-xs text-[#987f83]">
-                {confirmation.booking.customer?.email || "No email"}
+            <div className="rounded-lg bg-[#fce9eb] p-3 text-[#92283b]">
+              <Plus size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#302521]">
+                Add Service
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Publish a new service
               </p>
             </div>
-          )}
+            <ArrowRight className="ml-auto text-gray-400" size={17} />
+          </Link>
 
-          <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-3 sm:flex-row">
-            <AlertDialogCancel
-              disabled={!!processingId}
-              className="mt-0 h-11 rounded-xl border-[#eadfd9] text-[#735b60] hover:bg-[#faf4f1]"
-            >
-              Cancel
-            </AlertDialogCancel>
+          <Link
+            href="/dashboard/vendor/bookings"
+            className="flex items-center gap-3 rounded-lg border border-[#eadfd8] p-4 transition hover:border-[#92283b] hover:bg-[#fcfaf8]"
+          >
+            <div className="rounded-lg bg-amber-50 p-3 text-amber-600">
+              <CalendarDays size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#302521]">
+                Booking Requests
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Manage customer bookings
+              </p>
+            </div>
+            <ArrowRight className="ml-auto text-gray-400" size={17} />
+          </Link>
 
-            <AlertDialogAction
-              disabled={
-                !confirmation ||
-                processingId === confirmation?.booking._id
-              }
-              onClick={(e) => {
-                e.preventDefault();
-                void handleBookingAction();
-              }}
-              className={`h-11 rounded-xl text-white shadow-none ${
-                confirmation?.status === "Confirmed"
-                  ? "bg-[#dc2027] hover:bg-[#761d2e]"
-                  : "bg-red-600 hover:bg-red-700"
-              }`}
-            >
-              {confirmation &&
-              processingId === confirmation.booking._id ? (
-                <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : confirmation?.status === "Confirmed" ? (
-                <>
-                  <CheckCircle2 size={16} className="mr-2" />
-                  Yes, Accept
-                </>
-              ) : (
-                <>
-                  <XCircle size={16} className="mr-2" />
-                  Yes, Reject
-                </>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
+          <Link
+            href="/dashboard/vendor/subscription"
+            className="flex items-center gap-3 rounded-lg border border-[#eadfd8] p-4 transition hover:border-[#92283b] hover:bg-[#fcfaf8] sm:col-span-2 lg:col-span-1"
+          >
+            <div className="rounded-lg bg-purple-50 p-3 text-purple-600">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#302521]">
+                Upgrade Plan
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Explore Premium benefits
+              </p>
+            </div>
+            <ArrowRight className="ml-auto text-gray-400" size={17} />
+          </Link>
+        </div>
+      </section>
 
-// Statistics Card
-function StatCard({
-  icon,
-  label,
-  value,
-  subtitle,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  subtitle: string;
-  color: "burgundy" | "amber" | "green" | "red";
-}) {
-  const styles = {
-    burgundy: "bg-[#f8f0ed] text-[#dc2027]",
-    amber: "bg-amber-50 text-amber-600",
-    green: "bg-emerald-50 text-emerald-600",
-    red: "bg-red-50 text-red-600",
-  };
+      {/* Recent Bookings */}
+      <section className="overflow-hidden rounded-xl border border-[#eadfd8] bg-white">
+        <div className="flex items-center justify-between gap-3 border-b border-[#eadfd8] p-5">
+          <div>
+            <h2 className="text-lg font-bold text-[#302521]">
+              Recent Booking Requests
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Latest requests from your customers.
+            </p>
+          </div>
 
-  return (
-    <div className="rounded-2xl border border-[#eadfd9] bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl ${styles[color]}`}
-        >
-          {icon}
+          <Link
+            href="/dashboard/vendor/bookings"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[#92283b] hover:underline"
+          >
+            View All <ArrowRight size={15} />
+          </Link>
         </div>
 
-        <span className="text-xs text-[#a18c90]">{subtitle}</span>
+        {recentBookings.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <CalendarDays
+              className="mx-auto mb-3 text-gray-300"
+              size={36}
+            />
+            <h3 className="font-semibold text-[#302521]">
+              No Booking Requests Yet
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Customer booking requests will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-left">
+              <thead className="bg-[#fcfaf8] text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-5 py-4 font-semibold">Customer</th>
+                  <th className="px-5 py-4 font-semibold">Service</th>
+                  <th className="px-5 py-4 font-semibold">Event Date</th>
+                  <th className="px-5 py-4 font-semibold">Status</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[#f1e9e4]">
+                {recentBookings.map((booking, index) => (
+                  <tr
+                    key={booking._id || booking.id || index}
+                    className="transition hover:bg-[#fcfaf8]"
+                  >
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-semibold text-[#302521]">
+                        {booking.customerName ||
+                          booking.customer?.name ||
+                          "Customer"}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {booking.customer?.email || "Booking request"}
+                      </p>
+                    </td>
+
+                    <td className="px-5 py-4 text-sm text-gray-600">
+                      {booking.serviceName ||
+                        booking.service?.serviceName ||
+                        booking.service?.title ||
+                        "Wedding Service"}
+                    </td>
+
+                    <td className="px-5 py-4 text-sm text-gray-600">
+                      {formatDate(booking.eventDate)}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClass(
+                          booking.status
+                        )}`}
+                      >
+                        {booking.status || "Unknown"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Recent Services */}
+      <section className="rounded-xl border border-[#eadfd8] bg-white p-5 sm:p-6">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#302521]">
+              My Recent Services
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Recently added services in your account.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/vendor/services"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[#92283b] hover:underline"
+          >
+            View All <ArrowRight size={15} />
+          </Link>
+        </div>
+
+        {recentServices.length === 0 ? (
+          <div className="rounded-lg bg-[#fcfaf8] px-5 py-10 text-center">
+            <BriefcaseBusiness
+              className="mx-auto mb-3 text-gray-300"
+              size={36}
+            />
+            <h3 className="font-semibold text-[#302521]">
+              No Services Added
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Start growing your business by adding your first service.
+            </p>
+            <Link
+              href="/dashboard/vendor/services/add"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#92283b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#762031]"
+            >
+              <Plus size={16} />
+              Add Your First Service
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {recentServices.map((service, index) => (
+              <div
+                key={service._id || service.id || index}
+                className="rounded-lg border border-[#eadfd8] p-4 transition hover:border-[#92283b]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-semibold text-[#302521]">
+                      {service.serviceName || service.title || "Untitled Service"}
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {service.category || "Wedding Service"}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusClass(
+                      service.status
+                    )}`}
+                  >
+                    {service.status || "Unknown"}
+                  </span>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <span className="text-sm font-bold text-[#92283b]">
+                    ৳{Number(service.price || 0).toLocaleString("en-BD")}
+                  </span>
+
+                  <span className="inline-flex min-w-0 items-center gap-1 text-xs text-gray-500">
+                    <MapPin size={13} />
+                    <span className="truncate">
+                      {service.location || "Location not set"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Footer note */}
+      <div className="flex items-center justify-center gap-2 pb-2 text-xs text-gray-400">
+        <Eye size={14} />
+        Your vendor dashboard is updated with your latest account data.
       </div>
-
-      <h3 className="mt-4 text-3xl font-bold text-[#421b24]">
-        {value}
-      </h3>
-
-      <p className="mt-1 text-sm text-[#8b7478]">{label}</p>
-    </div>
-  );
-}
-
-// Information Box
-function InfoBox({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl bg-[#fcfaf9] p-4">
-      <p className="text-xs text-[#987f83]">{label}</p>
-
-      <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#421b24]">
-        <span className="shrink-0 text-[#dc2027]">{icon}</span>
-        {value}
-      </p>
     </div>
   );
 }

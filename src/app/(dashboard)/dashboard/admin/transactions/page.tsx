@@ -6,7 +6,6 @@ import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 
 import TransactionsClient from "./TransactionsClient";
-import { getAllTransactions } from "@/lib/actions/payments";
 
 export default async function AdminTransactionsPage() {
   // 1. Authenticate
