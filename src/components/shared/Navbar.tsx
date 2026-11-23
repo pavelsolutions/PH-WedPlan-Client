@@ -96,7 +96,7 @@ export default function Navbar() {
           </div>
 
           <div>
-            <h1 className="text-xl font-bold tracking-wide text-[#302521]">
+            <h1 className="text-xl font-bold tracking-wide text-[#dc2027]">
               Wed<span className="text-[#f45b4f]">Plan</span>
             </h1>
 
@@ -147,7 +147,7 @@ export default function Navbar() {
                   </div>
                 )}
 
-                <span className="max-w-24 truncate text-sm font-semibold text-[#302521]">
+                <span className="max-w-24 truncate text-sm font-semibold text-[#dc2027]">
                   {user.name || "User"}
                 </span>
 
@@ -180,7 +180,7 @@ export default function Navbar() {
                       )}
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-[#302521]">
+                        <p className="truncate text-sm font-bold text-[#dc2027]">
                           {user.name || "User"}
                         </p>
 

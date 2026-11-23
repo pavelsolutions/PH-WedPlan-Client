@@ -304,7 +304,7 @@ function DashboardShellContent({
         </div>
 
         {/* Main Workspace */}
-        <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-[250px_minmax(0,1fr)] sm:gap-6">
+        <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:gap-6">
 
           {/* Sidebar */}
           <div className="hidden sm:block">

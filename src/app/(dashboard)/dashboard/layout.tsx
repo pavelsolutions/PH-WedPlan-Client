@@ -1,31 +1,25 @@
 
-import { redirect } from "next/navigation";
+import { ReactNode } from "react";
 
-import { requireDashboardUser } from "@/lib/dashboard-auth";
+import { requireDashboardUser } from "@/lib/require-dashboard-user";
 import DashboardShell from "./_components/dashboard/dashboard-shell";
-import type { DashboardRole } from "./_components/dashboard/dashboard-sidebar";
-
-const isDashboardRole = (role: string): role is DashboardRole => {
-  return ["vendor", "customer", "admin"].includes(role);
-};
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const user = await requireDashboardUser();
 
-  // Normalize role
-  const role = String(user.role ?? "").trim().toLowerCase();
-
-  // Validate role
-  if (!isDashboardRole(role)) {
-    redirect("/login");
-  }
-
   return (
-    <DashboardShell user={user} role={role}>
+    <DashboardShell
+      role={user.role}
+      user={{
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      }}
+    >
       {children}
     </DashboardShell>
   );

@@ -119,7 +119,7 @@ export default function WeddingServiceCategories() {
             className="relative overflow-hidden bg-[#FCF9F7] py-20 sm:py-24 lg:py-28"
         >
             {/* Decorative background */}
-            <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#92283D]/[0.04] blur-3xl" />
+            <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#dc2027]/[0.04] blur-3xl" />
 
             <div className="pointer-events-none absolute -right-32 bottom-10 h-72 w-72 rounded-full bg-[#D8B6A8]/20 blur-3xl" />
 
@@ -133,14 +133,14 @@ export default function WeddingServiceCategories() {
                     transition={{ duration: 0.7, ease: "easeOut" }}
                     className="mx-auto mb-14 max-w-3xl text-center sm:mb-16"
                 >
-                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#92283D]/15 bg-[#92283D]/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#92283D]">
+                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#dc2027]/15 bg-[#dc2027]/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#dc2027]">
                         <Sparkles size={14} />
                         Wedding Services
                     </div>
 
                     <h2 className="text-3xl font-bold tracking-tight text-[#302326] sm:text-4xl lg:text-5xl">
                         Plan Your Wedding,
-                        <span className="mt-2 block font-serif font-normal italic text-[#92283D]">
+                        <span className="mt-2 block font-serif font-normal italic text-[#dc2027]">
                             Your Way
                         </span>
                     </h2>
@@ -206,7 +206,7 @@ export default function WeddingServiceCategories() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/5 transition-colors duration-500 group-hover:from-[#641C2C]/90" />
 
                                     {/* Category Icon */}
-                                    <div className="absolute left-5 top-5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/15 text-white backdrop-blur-md transition-all duration-300 group-hover:border-white group-hover:bg-white group-hover:text-[#92283D]">
+                                    <div className="absolute left-5 top-5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/15 text-white backdrop-blur-md transition-all duration-300 group-hover:border-white group-hover:bg-white group-hover:text-[#dc2027]">
                                         <Icon size={20} strokeWidth={1.8} />
                                     </div>
 
@@ -245,7 +245,7 @@ export default function WeddingServiceCategories() {
                                                         }
                                                 }
                                                 transition={{ duration: 0.25 }}
-                                                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#92283D] transition-colors duration-300 group-hover:bg-[#92283D] group-hover:text-white"
+                                                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#dc2027] transition-colors duration-300 group-hover:bg-[#dc2027] group-hover:text-white"
                                             >
                                                 <ArrowUpRight size={18} />
                                             </motion.div>
@@ -267,7 +267,7 @@ export default function WeddingServiceCategories() {
                 >
                     <Link
                         href="/services"
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#92283D]/25 bg-[#ee5151] px-7 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:bg-[#7B2032] hover:shadow-md"
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#dc2027]/25 bg-[#ee5151] px-7 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:bg-[#7B2032] hover:shadow-md"
                     >
                         <span className="whitespace-nowrap">Explore All Services</span>
 

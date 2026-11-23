@@ -1,8 +1,14 @@
-import { requireDashboardUser } from "@/lib/dashboard-auth";
-import DashboardOverview from "./_components/dashboard/dashboard-overview";
+import { redirect } from "next/navigation";
+import { requireDashboardUser } from "@/lib/require-dashboard-user";
 
-export default async function DashboardPage() {
-  const user = await requireDashboardUser();
+export default async function DashboardRedirect() {
+    const user = await requireDashboardUser();
 
-  return <DashboardOverview role={user.role} />;
+    const routes = {
+        admin: "/dashboard/admin",
+        vendor: "/dashboard/vendor",
+        customer: "/dashboard/customer",
+    };
+
+    redirect(routes[user.role]);
 }

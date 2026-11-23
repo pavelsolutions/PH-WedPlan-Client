@@ -1,4 +1,5 @@
 import { IService } from "@/types";
+import { getTokenFromClient } from "../token/getTokenFromClient";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
@@ -157,9 +158,18 @@ export const getVendorServices = async (vendorId: string) => {
 };
 
 export const getAdminServices = async () => {
+  const token = await getTokenFromClient();
   const res = await fetch(
-    `${BASE_URL}/admin/services`
-  );
+    `${BASE_URL}/admin/services`, { 
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${token}`,
+    }
+  });
+
+  
+
+  
 
   if (!res.ok) {
     throw new Error("Failed to fetch vendor services");

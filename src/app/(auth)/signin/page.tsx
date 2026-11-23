@@ -40,125 +40,249 @@ export default function SigninPage() {
     const [showPassword, setShowPassword] = useState(false);
 
     // Email and Password Login
-    const handleSignin = async (
-        e: React.FormEvent<HTMLFormElement>
-    ) => {
-        e.preventDefault();
+    // const handleSignin = async (
+    //     e: React.FormEvent<HTMLFormElement>
+    // ) => {
+    //     e.preventDefault();
 
-        if (!email.trim() || !password) {
-            toast.error("Missing information", {
-                description: "Please enter your email and password.",
-            });
-            return;
+    //     if (!email.trim() || !password) {
+    //         toast.error("Missing information", {
+    //             description: "Please enter your email and password.",
+    //         });
+    //         return;
+    //     }
+
+    //     let toastId: string | number | undefined;
+
+    //     try {
+    //         setLoading(true);
+
+    //         toastId = toast.loading("Signing you in...");
+
+    //         const { data, error } = await authClient.signIn.email({
+    //             email: email.trim(),
+    //             password,
+    //         });
+
+    //         if (error) {
+    //             throw new Error(
+    //                 error.message || "Invalid email or password."
+    //             );
+    //         }
+
+    //         // Get authenticated user session
+    //         const sessionResult = await authClient.getSession();
+
+    //         const loggedInUser =
+    //             sessionResult.data?.user || data?.user;
+
+    //         if (!loggedInUser) {
+    //             throw new Error("Unable to retrieve your user session.");
+    //         }
+
+    //         // Get user role
+    //         const userRole = (
+    //             loggedInUser as typeof loggedInUser & {
+    //                 role?: string;
+    //             }
+    //         ).role;
+
+    //         toast.success("Login successful!", {
+    //             id: toastId,
+    //             description: `Welcome back, ${loggedInUser.name || "User"}!`,
+    //             duration: 2000,
+    //         });
+
+    //         // Role-based dashboard redirect
+    //         const dashboard =
+    //             userRole === "vendor"
+    //                 ? "/dashboard/vendor"
+    //                 : userRole === "admin"
+    //                     ? "/dashboard/admin"
+    //                     : "/dashboard/customer";
+
+    //         // const dashboard = "/dashboard";
+
+    //         setTimeout(() => {
+    //             router.push(dashboard);
+    //             router.refresh();
+    //         }, 1000);
+
+    //     } catch (err) {
+    //         const message =
+    //             err instanceof Error
+    //                 ? err.message
+    //                 : "Something went wrong. Please try again.";
+
+    //         toast.error("Login failed!", {
+    //             id: toastId,
+    //             description: message,
+    //             duration: 4000,
+    //         });
+
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
+
+const handleSignin = async (
+    e: React.FormEvent<HTMLFormElement>
+) => {
+    e.preventDefault();
+
+    if (!email.trim() || !password) {
+        toast.error("Missing information", {
+            description: "Please enter your email and password.",
+        });
+        return;
+    }
+
+    let toastId: string | number | undefined;
+
+    try {
+        setLoading(true);
+
+        toastId = toast.loading("Signing you in...");
+
+        const { error } = await authClient.signIn.email({
+            email: email.trim(),
+            password,
+        });
+
+        if (error) {
+            throw new Error(
+                error.message || "Invalid email or password."
+            );
         }
 
-        let toastId: string | number | undefined;
+        // Get authenticated session
+        const { data: session, error: sessionError } =
+            await authClient.getSession();
 
-        try {
-            setLoading(true);
-
-            toastId = toast.loading("Signing you in...");
-
-            const { data, error } = await authClient.signIn.email({
-                email: email.trim(),
-                password,
-            });
-
-            if (error) {
-                throw new Error(
-                    error.message || "Invalid email or password."
-                );
-            }
-
-            // Get authenticated user session
-            const sessionResult = await authClient.getSession();
-
-            const loggedInUser =
-                sessionResult.data?.user || data?.user;
-
-            if (!loggedInUser) {
-                throw new Error("Unable to retrieve your user session.");
-            }
-
-            // Get user role
-            const userRole = (
-                loggedInUser as typeof loggedInUser & {
-                    role?: string;
-                }
-            ).role;
-
-            toast.success("Login successful!", {
-                id: toastId,
-                description: `Welcome back, ${loggedInUser.name || "User"}!`,
-                duration: 2000,
-            });
-
-            // Role-based dashboard redirect
-            const dashboard =
-                userRole === "vendor"
-                    ? "/dashboard/vendor"
-                    : userRole === "admin"
-                        ? "/dashboard/admin"
-                        : "/dashboard/customer";
-
-            // const dashboard = "/dashboard";
-
-            setTimeout(() => {
-                router.push(dashboard);
-                router.refresh();
-            }, 1000);
-
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Something went wrong. Please try again.";
-
-            toast.error("Login failed!", {
-                id: toastId,
-                description: message,
-                duration: 4000,
-            });
-
-        } finally {
-            setLoading(false);
+        if (sessionError || !session?.user) {
+            throw new Error("Unable to retrieve your session.");
         }
-    };
+
+        // Get user role
+        const userRole = (
+            session.user as typeof session.user & {
+                role?: string;
+            }
+        ).role;
+
+        // Role-based routing
+        const dashboardRoutes: Record<string, string> = {
+            admin: "/dashboard/admin",
+            vendor: "/dashboard/vendor",
+            customer: "/dashboard/customer",
+        };
+
+        const dashboard = userRole
+            ? dashboardRoutes[userRole]
+            : undefined;
+
+        if (!dashboard) {
+            await authClient.signOut();
+
+            throw new Error(
+                "Your account does not have a valid role."
+            );
+        }
+
+        toast.success("Login successful!", {
+            id: toastId,
+            description: `Welcome back, ${session.user.name || "User"}!`,
+            duration: 1500,
+        });
+
+        router.replace(dashboard);
+        router.refresh();
+
+    } catch (err) {
+        const message =
+            err instanceof Error
+                ? err.message
+                : "Something went wrong. Please try again.";
+
+        toast.error("Login failed!", {
+            id: toastId,
+            description: message,
+            duration: 4000,
+        });
+
+    } finally {
+        setLoading(false);
+    }
+};
 
     // Google Login
+    // const handleGoogleSignin = async () => {
+    //     try {
+    //         setGoogleLoading(true);
+
+    //         toast.loading("Connecting to Google...", {
+    //             id: "google-login",
+    //         });
+
+    //         const { error } = await authClient.signIn.social({
+    //             provider: "google",
+    //             callbackURL: "/",
+    //         });
+
+    //         if (error) {
+    //             throw new Error(
+    //                 error.message || "Google authentication failed."
+    //             );
+    //         }
+
+    //     } catch (err) {
+    //         const message =
+    //             err instanceof Error
+    //                 ? err.message
+    //                 : "Google authentication failed.";
+
+    //         toast.error("Google login failed!", {
+    //             id: "google-login",
+    //             description: message,
+    //         });
+
+    //         setGoogleLoading(false);
+    //     }
+    // };
     const handleGoogleSignin = async () => {
-        try {
-            setGoogleLoading(true);
+    try {
+        setGoogleLoading(true);
 
-            toast.loading("Connecting to Google...", {
-                id: "google-login",
-            });
+        toast.loading("Connecting to Google...", {
+            id: "google-login",
+        });
 
-            const { error } = await authClient.signIn.social({
-                provider: "google",
-                callbackURL: "/",
-            });
+        const { error } = await authClient.signIn.social({
+            provider: "google",
+            callbackURL: "/dashboard",
+        });
 
-            if (error) {
-                throw new Error(
-                    error.message || "Google authentication failed."
-                );
-            }
-
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Google authentication failed.";
-
-            toast.error("Google login failed!", {
-                id: "google-login",
-                description: message,
-            });
-
-            setGoogleLoading(false);
+        if (error) {
+            throw new Error(
+                error.message || "Google authentication failed."
+            );
         }
-    };
+
+    } catch (err) {
+        const message =
+            err instanceof Error
+                ? err.message
+                : "Google authentication failed.";
+
+        toast.error("Google login failed!", {
+            id: "google-login",
+            description: message,
+        });
+
+        setGoogleLoading(false);
+    }
+};
 
     return (
         <main className="min-h-screen bg-[#fffaf7] px-4 py-10 sm:px-6 lg:py-16">

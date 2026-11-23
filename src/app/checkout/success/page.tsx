@@ -58,7 +58,7 @@ export default async function CheckoutSuccessPage({
 
   // Payment must be complete and paid
   if (status !== "complete" || payment_status !== "paid") {
-    redirect("/dashboard/vendor/upgrade?payment=failed");
+    redirect("/cancel");
   }
 
   // Verify payment in your backend/database

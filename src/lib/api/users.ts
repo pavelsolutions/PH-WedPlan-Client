@@ -1,4 +1,6 @@
-import { IProfile, IUpdateProfileResponse } from "@/types";
+import { IProfile } from "@/types";
+import { getTokenFromServer } from "../token/getTokenFromServer";
+import { getTokenFromClient } from "../token/getTokenFromClient";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL
@@ -58,7 +60,13 @@ export const updateProfile = async (
 
 // Get All Registered Users
 export const getAdminUsers = async () => {
-  const res = await fetch(`${BASE_URL}/admin/users`);
+  const token = await getTokenFromClient();
+  const res = await fetch(`${BASE_URL}/admin/users`,{
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${token}`,
+    }
+  });
 
   if (!res.ok) {
     throw new Error("Failed to fetch users");

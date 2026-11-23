@@ -1,61 +1,86 @@
+
+"use client";
+
 import Link from "next/link";
 import {
-  CircleX,
+  XCircle,
   ArrowLeft,
-  RefreshCcw,
+  RefreshCw,
   ShieldCheck,
+  CreditCard,
+  Heart,
 } from "lucide-react";
 
-export default function PaymentCancelPage() {
+export default function PaymentCancelled() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FAF8F7] px-4 py-10">
-      <div className="w-full max-w-lg rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm sm:p-10">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-50">
-          <CircleX className="h-10 w-10 text-amber-500" />
+    <section className="flex min-h-[75vh] items-center justify-center bg-[#fffaf8] px-4 py-12">
+      <div className="w-full max-w-lg rounded-3xl border border-rose-100 bg-white p-8 text-center shadow-xl shadow-rose-100/50 sm:p-12">
+
+        {/* Icon */}
+        <div className="relative mx-auto mb-7 flex h-24 w-24 items-center justify-center rounded-full bg-rose-50">
+          <div className="absolute inset-2 rounded-full border border-rose-200" />
+          <XCircle size={48} className="text-rose-500" />
         </div>
 
-        <h1 className="mt-6 text-2xl font-bold text-gray-900 sm:text-3xl">
+        {/* Heading */}
+        <span className="mb-4 inline-flex rounded-full bg-rose-50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-500">
           Payment Cancelled
+        </span>
+
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          No Worries!
         </h1>
 
-        <p className="mt-3 text-sm leading-6 text-gray-500">
-          Your checkout was cancelled. No Premium subscription has
-          been activated. You can try again whenever you are ready.
+        <p className="mt-4 text-sm leading-7 text-gray-500 sm:text-base">
+          Your payment process was cancelled. No amount has been charged
+          through this cancelled checkout. You can try upgrading your
+          vendor account whenever you're ready.
         </p>
 
-        <div className="mt-7 rounded-2xl border border-gray-100 bg-gray-50 p-5 text-left">
+        {/* Info */}
+        <div className="my-8 rounded-2xl border border-gray-100 bg-gray-50 p-5 text-left">
           <div className="flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 shrink-0 text-gray-500" />
-
+            <div className="rounded-xl bg-white p-3 text-rose-500 shadow-sm">
+              <CreditCard size={21} />
+            </div>
             <div>
-              <p className="text-sm font-semibold text-gray-800">
-                Your account is safe
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                No subscription changes were made because checkout
-                was cancelled.
+              <h3 className="font-semibold text-gray-800">
+                Your account is unchanged
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-gray-500">
+                Your current vendor plan and account information remain
+                unchanged.
               </p>
             </div>
           </div>
         </div>
 
-        <Link
-          href="/dashboard/vendor/upgrade"
-          className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#92283D] text-sm font-semibold text-white transition hover:bg-[#7B2032]"
-        >
-          <RefreshCcw className="h-4 w-4" />
-          Try Payment Again
-        </Link>
+        {/* Buttons */}
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/dashboard/vendor/upgrade"
+            className="flex items-center justify-center gap-2 rounded-xl bg-rose-500 px-6 py-4 font-semibold text-white shadow-lg shadow-rose-200 transition hover:bg-rose-600"
+          >
+            <RefreshCw size={18} />
+            Try Again
+          </Link>
 
-        <Link
-          href="/dashboard/vendor"
-          className="mt-4 inline-flex items-center gap-2 text-sm text-gray-500 transition hover:text-[#92283D]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
+          <Link
+            href="/dashboard/vendor"
+            className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-6 py-4 font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            <ArrowLeft size={18} />
+            Back to Dashboard
+          </Link>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-400">
+          <ShieldCheck size={15} />
+          Secure payments powered by Stripe
+          <Heart size={13} className="fill-rose-400 text-rose-400" />
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

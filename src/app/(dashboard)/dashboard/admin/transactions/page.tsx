@@ -6,12 +6,14 @@ import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 
 import TransactionsClient from "./TransactionsClient";
+import { getAllTransactions } from "@/lib/actions/payments";
 
 export default async function AdminTransactionsPage() {
   // 1. Authenticate
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
 
   if (!session) {
     redirect("/login");
@@ -96,9 +98,9 @@ export default async function AdminTransactionsPage() {
       typeof paymentIntent === "string"
         ? paymentIntent
         : paymentIntent?.id ||
-          payment.stripePaymentIntentId ||
-          payment.paymentIntentId ||
-          "";
+        payment.stripePaymentIntentId ||
+        payment.paymentIntentId ||
+        "";
 
     const sessionId =
       payment.sessionId ||
@@ -125,8 +127,8 @@ export default async function AdminTransactionsPage() {
 
     const rawStatus = String(
       payment.payment_status ||
-        payment.status ||
-        "unknown"
+      payment.status ||
+      "unknown"
     ).toLowerCase();
 
     let status = rawStatus;

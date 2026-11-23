@@ -1,3 +1,5 @@
+import { getTokenFromClient } from "../token/getTokenFromClient";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 
@@ -9,12 +11,14 @@ export const createBooking = async (bookingData: {
     eventLocation: string;
     message: string;
 }) => {
+   const token = await getTokenFromClient();
     const response = await fetch(`${BASE_URL}/bookings`, {
         method: "POST",
         credentials: "include",
         headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
+            authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(bookingData),
     });
